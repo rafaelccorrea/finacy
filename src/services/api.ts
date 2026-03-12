@@ -76,7 +76,7 @@ export const plansService = {
 export const subscriptionsService = {
   current: () => api.get('/subscriptions/current'),
   history: () => api.get('/subscriptions/history'),
-  dashboard: () => api.get('/subscriptions/stats/dashboard'),
+  dashboard: () => api.get('/subscriptions/dashboard'),
 };
 
 // ─── Payments Service ─────────────────────────────────────────────────────────

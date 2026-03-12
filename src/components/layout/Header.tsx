@@ -1,7 +1,6 @@
 import React from 'react';
-import { Bell, Sun, Moon, Menu } from 'lucide-react';
+import { Bell, Sun, Moon } from 'lucide-react';
 import { useThemeStore, useAuthStore, useUIStore } from '@/store';
-import { Avatar, cn } from '@/components/ui';
 
 interface HeaderProps {
   title: string;
@@ -11,68 +10,131 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
   const { theme, toggleTheme } = useThemeStore();
   const { user } = useAuthStore();
-  const { sidebarOpen, toggleSidebar } = useUIStore();
+  const { sidebarOpen } = useUIStore();
 
   return (
     <header
-      className={cn(
-        'fixed top-0 right-0 z-30 h-16 flex items-center justify-between px-6',
-        'bg-[var(--bg-primary)]/90 backdrop-blur-md border-b border-[var(--border-color)]',
-        'transition-all duration-300',
-        sidebarOpen ? 'left-64' : 'left-16',
-      )}
+      style={{
+        position: 'fixed',
+        top: 0,
+        right: 0,
+        left: sidebarOpen ? '256px' : '64px',
+        zIndex: 30,
+        height: '64px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 24px',
+        backgroundColor: 'var(--bg-primary)',
+        borderBottom: '1px solid var(--border-color)',
+        transition: 'left 0.3s ease',
+        backdropFilter: 'blur(12px)',
+      }}
     >
-      {/* Left: Hamburger (mobile) + Title */}
-      <div className="flex items-center gap-4">
-        {/* Mobile menu toggle */}
-        <button
-          onClick={toggleSidebar}
-          className="lg:hidden p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
-        >
-          <Menu className="h-4 w-4" />
-        </button>
-
-        <div>
-          <h1 className="text-base font-bold text-[var(--text-primary)] leading-none">{title}</h1>
-          {subtitle && (
-            <p className="text-xs text-[var(--text-muted)] mt-0.5 leading-none">{subtitle}</p>
-          )}
-        </div>
+      {/* Left: Title */}
+      <div>
+        <h1 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{title}</h1>
+        {subtitle && (
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px', lineHeight: 1 }}>{subtitle}</p>
+        )}
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-1">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
           aria-label="Alternar tema"
           title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+          style={{
+            padding: '8px',
+            borderRadius: '10px',
+            color: 'var(--text-muted)',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-tertiary)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+          }}
         >
-          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
 
         {/* Notifications */}
         <button
-          className="relative p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
           title="Notificações"
+          style={{
+            position: 'relative',
+            padding: '8px',
+            borderRadius: '10px',
+            color: 'var(--text-muted)',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-tertiary)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+          }}
         >
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-[var(--bg-primary)]" />
+          <Bell size={16} />
+          <span
+            style={{
+              position: 'absolute',
+              top: '6px',
+              right: '6px',
+              height: '8px',
+              width: '8px',
+              borderRadius: '50%',
+              backgroundColor: '#F43F5E',
+              border: '2px solid var(--bg-primary)',
+            }}
+          />
         </button>
 
         {/* Divider */}
-        <div className="w-px h-6 bg-[var(--border-color)] mx-2" />
+        <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)', margin: '0 8px' }} />
 
         {/* User Avatar */}
         {user && (
-          <div className="flex items-center gap-2.5 cursor-pointer group">
-            <Avatar name={user.name} size="sm" />
-            <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-[var(--text-primary)] leading-none">
-                {user.name.split(' ')[0]}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+            <div
+              style={{
+                height: '32px',
+                width: '32px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #4F46E5, #06B6D4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ color: 'white', fontWeight: 700, fontSize: '13px' }}>
+                {user.name?.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div style={{ display: 'none' }} className="sm:block">
+              <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>
+                {user.name?.split(' ')[0]}
               </p>
-              <p className="text-[10px] text-[var(--text-muted)] mt-0.5 capitalize">
+              <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px', textTransform: 'capitalize' }}>
                 {user.role?.toLowerCase().replace('_', ' ')}
               </p>
             </div>

@@ -6,6 +6,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { MyPlanPage } from '@/pages/MyPlanPage';
 import { CleanNamePage } from '@/pages/CleanNamePage';
+import { AutoLoginPage } from '@/pages/AutoLoginPage';
 import { useAuthStore, useThemeStore } from '@/store';
 
 const queryClient = new QueryClient({
@@ -41,6 +42,7 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+          <Route path="/auto-login" element={<AutoLoginPage />} />
 
           {/* Protected Routes */}
           <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

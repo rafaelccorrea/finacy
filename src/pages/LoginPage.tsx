@@ -182,17 +182,19 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <Input
               label="E-mail"
+              id="login-email"
               type="email"
               placeholder="seu@email.com"
               leftIcon={<Mail className="h-4 w-4" />}
               error={errors.email?.message}
-              autoComplete="username"
-              {...register('email')}
+              autoComplete="email"
+              {...register('email', { setValueAs: v => v.trim() })}
             />
 
             <div>
               <Input
                 label="Senha"
+                id="login-password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 leftIcon={<Lock className="h-4 w-4" />}

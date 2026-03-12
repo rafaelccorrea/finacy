@@ -1,10 +1,23 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>finacy-front</title>
+    <meta name="description" content="Finacy - Sua liberdade financeira começa aqui" />
+  <title>Finacy</title>
+  <!-- Aplicar tema dark ANTES de qualquer CSS para evitar flash -->
+  <script>
+    (function() {
+      try {
+        var s = localStorage.getItem('finacy-theme');
+        var t = s ? JSON.parse(s).state.theme : 'dark';
+        if (t !== 'light') document.documentElement.classList.add('dark');
+      } catch(e) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
   </head>
   <body>
     <div id="root"></div>

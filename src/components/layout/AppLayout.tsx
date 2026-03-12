@@ -3,7 +3,6 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useUIStore } from '@/store';
-import { cn } from '@/components/ui';
 
 const pageTitles: Record<string, { title: string; subtitle?: string }> = {
   '/dashboard': { title: 'Painel', subtitle: 'Visão geral da sua conta' },
@@ -19,14 +18,16 @@ export const AppLayout: React.FC = () => {
   const pageInfo = pageTitles[location.pathname] || { title: 'Finacy' };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-secondary)]">
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
       <Sidebar />
       <Header title={pageInfo.title} subtitle={pageInfo.subtitle} />
       <main
-        className={cn(
-          'transition-all duration-300 pt-16',
-          sidebarOpen ? 'ml-64' : 'ml-16',
-        )}
+        style={{
+          marginLeft: sidebarOpen ? '256px' : '64px',
+          paddingTop: '64px',
+          transition: 'margin-left 0.3s ease',
+          minHeight: '100vh',
+        }}
       >
         <div className="p-6 animate-fade-in">
           <Outlet />
