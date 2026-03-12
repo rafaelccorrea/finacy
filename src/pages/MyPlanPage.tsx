@@ -534,7 +534,7 @@ export const MyPlanPage: React.FC = () => {
     fetchPlans();
     fetchSub();
     fetchCredits();
-  }, [];
+  }, []);
 
   const handleSubscribe = (planId: string) => {
     setSelectedPlan(planId);
