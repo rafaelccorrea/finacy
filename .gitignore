@@ -8,12 +8,16 @@ dist/
 dist-ssr/
 *.local
 
-# Environment variables
+# Environment variables (NUNCA commitar)
 .env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+.env.staging
 
 # Editor
 .vscode/
@@ -32,4 +36,20 @@ pnpm-debug.log*
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+
+# Package manager
+.npm
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+nohup.out
+
+# TypeScript
+*.tsbuildinfo
