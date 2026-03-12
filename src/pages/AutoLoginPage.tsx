@@ -36,19 +36,11 @@ export const AutoLoginPage: React.FC = () => {
       color: 'white',
       fontFamily: 'system-ui, sans-serif',
     }}>
-      <div style={{
-        width: '48px',
-        height: '48px',
-        borderRadius: '12px',
-        background: 'linear-gradient(135deg, #4f46e5, #06b6d4)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '24px',
-        fontWeight: 900,
-        marginBottom: '8px',
-      }}>F</div>
-      <div style={{ fontSize: '20px', fontWeight: 700 }}>Finacy</div>
+      <img
+        src="/logo-dark.png"
+        alt="Finacy"
+        style={{ height: '48px', width: 'auto', objectFit: 'contain', marginBottom: '8px', filter: 'drop-shadow(0 4px 12px rgba(99,102,241,0.5))' }}
+      />
       <div style={{
         width: '32px',
         height: '32px',

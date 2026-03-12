@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { LayoutDashboard, CreditCard, FileSearch, LogOut, Shield } from 'lucide-react';
+import { LayoutDashboard, CreditCard, FileSearch, LogOut } from 'lucide-react';
 import { useAuthStore, useUIStore } from '../../store';
 
 const SidebarContainer = styled.aside<{ $open: boolean }>`
@@ -32,15 +32,10 @@ const Logo = styled.div`
   margin-bottom: 32px;
 `;
 
-const LogoIcon = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: ${({ theme }) => theme.radius.md};
-  background: ${({ theme }) => theme.accent.gradient};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+const LogoImg = styled.img`
+  height: 36px;
+  width: auto;
+  object-fit: contain;
   flex-shrink: 0;
 `;
 
@@ -156,13 +151,10 @@ export const Sidebar: React.FC = () => {
       <Overlay $visible={sidebarOpen} onClick={() => setSidebarOpen(false)} />
       <SidebarContainer $open={sidebarOpen}>
         <Logo>
-          <LogoIcon>
-            <Shield size={22} color="white" />
-          </LogoIcon>
-          <LogoText>
-            <h1>Finacy</h1>
-            <span>Gestao Financeira</span>
-          </LogoText>
+          <LogoImg
+            src="/logo-dark.png"
+            alt="Finacy"
+          />
         </Logo>
 
         <NavSection>

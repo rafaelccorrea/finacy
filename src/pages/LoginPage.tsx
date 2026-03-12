@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
-import { Mail, Lock, Eye, EyeOff, Shield, Zap, BarChart3, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Zap, BarChart3, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../store';
 import { authService } from '../services/api';
 
@@ -72,22 +72,11 @@ const LogoRow = styled.div`
   margin-bottom: 56px;
 `;
 
-const LogoBox = styled.div`
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #6366f1, #22d3ee);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 24px rgba(99,102,241,0.4);
-`;
-
-const LogoName = styled.span`
-  font-size: 28px;
-  font-weight: 900;
-  color: white;
-  letter-spacing: -0.5px;
+const LogoImg = styled.img`
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(99,102,241,0.4));
 `;
 
 const HeroTitle = styled.h1`
@@ -320,8 +309,7 @@ export const LoginPage: React.FC = () => {
 
         <Content>
           <LogoRow>
-            <LogoBox><Shield size={24} color="white" /></LogoBox>
-            <LogoName>Finacy</LogoName>
+            <LogoImg src="/logo-dark.png" alt="Finacy" />
           </LogoRow>
 
           <HeroTitle>
@@ -336,7 +324,7 @@ export const LoginPage: React.FC = () => {
 
           <Features>
             <FeatureRow>
-              <FeatureIcon><Shield size={20} /></FeatureIcon>
+              <FeatureIcon><ShieldCheck size={20} /></FeatureIcon>
               <FeatureLabel>Seguranca de nivel bancario</FeatureLabel>
             </FeatureRow>
             <FeatureRow>
@@ -357,7 +345,7 @@ export const LoginPage: React.FC = () => {
           <FormSub>Acesse sua conta para continuar</FormSub>
 
           <Form onSubmit={handleSubmit}>
-            {error && <ErrorBox><Shield size={16} />{error}</ErrorBox>}
+            {error && <ErrorBox><AlertCircle size={16} />{error}</ErrorBox>}
 
             <FieldGroup>
               <Label>E-mail</Label>
