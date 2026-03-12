@@ -186,6 +186,7 @@ export const LoginPage: React.FC = () => {
               placeholder="seu@email.com"
               leftIcon={<Mail className="h-4 w-4" />}
               error={errors.email?.message}
+              autoComplete="username"
               {...register('email')}
             />
 
@@ -195,6 +196,7 @@ export const LoginPage: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 leftIcon={<Lock className="h-4 w-4" />}
+                autoComplete="current-password"
                 rightIcon={
                   <button
                     type="button"
