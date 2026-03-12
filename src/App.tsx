@@ -8,6 +8,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { MyPlanPage } from './pages/MyPlanPage';
 import { CleanNamePage } from './pages/CleanNamePage';
+import CleanNameDetailPage from './pages/CleanNameDetailPage';
 import { AutoLoginPage } from './pages/AutoLoginPage';
 import BuyCreditsPage from './pages/BuyCreditsPage';
 import { useAuthStore, useThemeStore } from './store';
@@ -37,6 +38,7 @@ function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="my-plan" element={<MyPlanPage />} />
           <Route path="clean-name" element={<CleanNamePage />} />
+          <Route path="clean-name/:id" element={<CleanNameDetailPage />} />
           <Route path="buy-credits" element={<BuyCreditsPage />} />
         </Route>
 

@@ -128,6 +128,25 @@ export const paymentsService = {
     api.post(`/payments/cancel/${subscriptionId}`),
 };
 
+// ─── Documents Service ──────────────────────────────────────────────────────
+export const documentsService = {
+  // Upload de documento de identificação (CNH, RG, CPF)
+  upload: (formData: FormData) =>
+    api.post('/documents/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  // Upload específico para Limpa Nome (endpoint dedicado no CleanName)
+  uploadForCleanName: (formData: FormData) =>
+    api.post('/clean-name/upload-document', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  list: () => api.get('/documents'),
+
+  getById: (id: string) => api.get(`/documents/${id}`),
+};
+
 // ─── Clean Name Service ───────────────────────────────────────────────────────
 export const cleanNameService = {
   create: (data: object) =>
