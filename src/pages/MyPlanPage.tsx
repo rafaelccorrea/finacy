@@ -1,294 +1,617 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle, Star, Zap, Crown, AlertTriangle, CreditCard, QrCode } from 'lucide-react';
-import { Card, Badge, Button, Skeleton } from '@/components/ui';
-import { plansService, subscriptionsService, paymentsService } from '@/services/api';
-import type { Plan, Subscription } from '@/types';
-import { format, differenceInDays } from 'date-fns';
+import React, { useState, useEffect } from 'react';
+import styled, { keyframes } from 'styled-components';
+import {
+  CheckCircle,
+  Star,
+  Zap,
+  Crown,
+  AlertTriangle,
+  CreditCard,
+  QrCode,
+  X,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store';
+import { plansService, subscriptionsService, paymentsService } from '../services/api';
+import { Card, Badge } from '../components/ui';
 
-const planIcons = [Zap, Star, Crown];
-const planColors = [
-  { gradient: 'from-blue-500 to-cyan-500', bg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500/30' },
-  { gradient: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-500/10', text: 'text-indigo-500', border: 'border-indigo-500/30' },
-  { gradient: 'from-violet-500 to-pink-500', bg: 'bg-violet-500/10', text: 'text-violet-500', border: 'border-violet-500/30' },
-];
+/* ─── Animations ──────────────────────────────────────────────────────────── */
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+/* ─── Styled Components ───────────────────────────────────────────────────── */
+const Page = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  animation: ${fadeIn} 0.4s ease;
+`;
+
+const SectionHeader = styled.div`
+  h2 {
+    font-size: 22px;
+    font-weight: 800;
+    color: ${({ theme }) => theme.text.primary};
+    margin: 0 0 4px 0;
+  }
+  p {
+    font-size: 14px;
+    color: ${({ theme }) => theme.text.muted};
+    margin: 0;
+  }
+`;
+
+/* Current Plan Card */
+const CurrentPlanCard = styled(Card)<{ $active?: boolean }>`
+  border-color: ${({ $active, theme }) => $active ? theme.accent.primary + '40' : theme.border.default};
+  background: ${({ $active, theme }) => $active
+    ? `linear-gradient(135deg, ${theme.accent.primary}08, ${theme.accent.secondary}08)`
+    : theme.bg.card};
+`;
+
+const PlanRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+`;
+
+const PlanInfo = styled.div`
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: ${({ theme }) => theme.text.muted};
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .plan-name {
+    font-size: 24px;
+    font-weight: 900;
+    color: ${({ theme }) => theme.text.primary};
+    margin: 0 0 4px 0;
+  }
+  .plan-price {
+    font-size: 14px;
+    color: ${({ theme }) => theme.text.muted};
+  }
+`;
+
+const PlanRight = styled.div`
+  text-align: right;
+  .label { font-size: 13px; color: ${({ theme }) => theme.text.muted}; }
+  .value { font-size: 15px; font-weight: 600; color: ${({ theme }) => theme.text.primary}; margin-top: 2px; }
+  .sub { font-size: 12px; color: ${({ theme }) => theme.text.muted}; margin-top: 2px; }
+`;
+
+const ProgressBar = styled.div`
+  margin-top: 20px;
+`;
+
+const ProgressLabel = styled.div`
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 8px;
+  .label { color: ${({ theme }) => theme.text.muted}; }
+  .value { font-weight: 600; color: ${({ theme }) => theme.text.primary}; }
+`;
+
+const ProgressTrack = styled.div`
+  height: 8px;
+  border-radius: 4px;
+  background: ${({ theme }) => theme.bg.tertiary};
+  overflow: hidden;
+`;
+
+const ProgressFill = styled.div<{ $pct: number }>`
+  height: 100%;
+  border-radius: 4px;
+  width: ${p => p.$pct}%;
+  background: ${({ theme }) => theme.accent.gradient};
+  transition: width 0.5s ease;
+`;
+
+const CancelBtn = styled.button`
+  margin-top: 16px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.status.danger}40;
+  background: ${({ theme }) => theme.status.dangerBg};
+  color: ${({ theme }) => theme.status.danger};
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  &:hover { background: ${({ theme }) => theme.status.danger}20; }
+`;
+
+/* Empty State */
+const EmptyBox = styled(Card)`
+  text-align: center;
+  padding: 32px;
+  border-style: dashed;
+`;
+
+/* Plans Grid */
+const PlansGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  @media (max-width: 1024px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 640px) { grid-template-columns: 1fr; }
+`;
+
+const PlanCard = styled.div<{ $highlighted?: boolean }>`
+  position: relative;
+  border-radius: ${({ theme }) => theme.radius.lg};
+  border: 1.5px solid ${({ $highlighted, theme }) =>
+    $highlighted ? theme.accent.primary + '50' : theme.border.default};
+  padding: 28px 24px;
+  background: ${({ theme }) => theme.bg.card};
+  transition: all 0.3s ease;
+  transform: ${({ $highlighted }) => $highlighted ? 'scale(1.03)' : 'none'};
+  box-shadow: ${({ $highlighted }) => $highlighted ? '0 8px 30px rgba(99,102,241,0.15)' : 'none'};
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: ${({ theme }) => theme.shadow.glow};
+  }
+`;
+
+const PopularTag = styled.span`
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  background: ${({ theme }) => theme.accent.gradient};
+  white-space: nowrap;
+`;
+
+const PlanIconBox = styled.div<{ $bg: string; $color: string }>`
+  width: 44px;
+  height: 44px;
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${p => p.$bg};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${p => p.$color};
+  margin-bottom: 16px;
+`;
+
+const PlanName = styled.h3`
+  font-size: 16px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.text.primary};
+  margin: 0 0 4px 0;
+`;
+
+const PlanTrialNote = styled.p`
+  font-size: 12px;
+  color: #10B981;
+  margin: 0;
+`;
+
+const PriceRow = styled.div`
+  margin: 20px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  .currency { font-size: 14px; color: ${({ theme }) => theme.text.muted}; }
+  .amount { font-size: 40px; font-weight: 900; color: ${({ theme }) => theme.text.primary}; line-height: 1; }
+  .period { font-size: 14px; color: ${({ theme }) => theme.text.muted}; }
+`;
+
+const PlanDesc = styled.p`
+  font-size: 12px;
+  color: ${({ theme }) => theme.text.muted};
+  margin: 0 0 20px 0;
+`;
+
+const FeatureList = styled.ul`
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const FeatureItem = styled.li`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: ${({ theme }) => theme.text.secondary};
+`;
+
+const SubscribeBtn = styled.button<{ $primary?: boolean }>`
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: ${({ $primary, theme }) => $primary ? 'none' : `1.5px solid ${theme.border.default}`};
+  background: ${({ $primary, theme }) => $primary ? theme.accent.gradient : 'transparent'};
+  color: ${({ $primary, theme }) => $primary ? 'white' : theme.text.primary};
+  box-shadow: ${({ $primary }) => $primary ? '0 4px 14px rgba(99,102,241,0.3)' : 'none'};
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: ${({ $primary }) => $primary
+      ? '0 6px 20px rgba(99,102,241,0.4)'
+      : '0 4px 12px rgba(0,0,0,0.1)'};
+  }
+`;
+
+const CurrentBadge = styled.div`
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #10B981;
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.2);
+`;
+
+/* Modal */
+const Overlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+`;
+
+const ModalCard = styled(Card)`
+  width: 100%;
+  max-width: 440px;
+  animation: ${fadeIn} 0.3s ease;
+`;
+
+const ModalTitle = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: ${({ theme }) => theme.text.primary};
+    margin: 0;
+  }
+`;
+
+const CloseBtn = styled.button`
+  background: transparent;
+  border: none;
+  color: ${({ theme }) => theme.text.muted};
+  cursor: pointer;
+  padding: 4px;
+  &:hover { color: ${({ theme }) => theme.text.primary}; }
+`;
+
+const PaymentOption = styled.button<{ $selected?: boolean }>`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid ${({ $selected, theme }) =>
+    $selected ? theme.accent.primary : theme.border.default};
+  background: ${({ $selected, theme }) =>
+    $selected ? theme.accent.primary + '10' : 'transparent'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+
+  &:hover { border-color: ${({ theme }) => theme.accent.primary}60; }
+`;
+
+const PayOptionText = styled.div`
+  flex: 1;
+  .label { font-size: 14px; font-weight: 600; color: ${({ theme }) => theme.text.primary}; }
+  .desc { font-size: 12px; color: ${({ theme }) => theme.text.muted}; }
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+`;
+
+const ModalBtn = styled.button<{ $primary?: boolean }>`
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: ${({ $primary, theme }) => $primary ? 'none' : `1.5px solid ${theme.border.default}`};
+  background: ${({ $primary, theme }) => $primary ? theme.accent.gradient : 'transparent'};
+  color: ${({ $primary, theme }) => $primary ? 'white' : theme.text.primary};
+`;
+
+const ErrorText = styled.p`
+  text-align: center;
+  font-size: 13px;
+  color: ${({ theme }) => theme.status.danger};
+  margin-top: 12px;
+`;
+
+/* ─── Types ───────────────────────────────────────────────────────────────── */
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  features?: string[];
+  cleanNameCredits: number;
+  trialDays?: number;
+  isHighlighted?: boolean;
+}
+
+interface Subscription {
+  id: string;
+  status: string;
+  planId: string;
+  plan?: Plan;
+  currentPeriodEnd: string;
+  cleanNameCreditsUsed?: number;
+  cleanNameCreditsTotal?: number;
+}
 
 type PaymentMethod = 'CREDIT_CARD' | 'PIX';
 
+const planIcons = [Zap, Star, Crown];
+const planColorSets = [
+  { bg: 'rgba(59,130,246,0.1)', color: '#3B82F6' },
+  { bg: 'rgba(99,102,241,0.1)', color: '#6366F1' },
+  { bg: 'rgba(139,92,246,0.1)', color: '#8B5CF6' },
+];
+
+/* ─── Component ───────────────────────────────────────────────────────────── */
 export const MyPlanPage: React.FC = () => {
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const [loadingSub, setLoadingSub] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CREDIT_CARD');
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const queryClient = useQueryClient();
+  const [showModal, setShowModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const { data: plansData, isLoading: loadingPlans } = useQuery({
-    queryKey: ['plans'],
-    queryFn: () => plansService.list(),
-  });
-
-  const { data: subData, isLoading: loadingSub } = useQuery({
-    queryKey: ['current-subscription'],
-    queryFn: () => subscriptionsService.current(),
-    retry: false,
-  });
-
-  const subscribeMutation = useMutation({
-    mutationFn: ({ planId, method }: { planId: string; method: PaymentMethod }) =>
-      paymentsService.subscribe(planId, method),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['current-subscription'] });
-      queryClient.invalidateQueries({ queryKey: ['subscription-dashboard'] });
-      setShowPaymentModal(false);
-      setSelectedPlan(null);
-    },
-  });
-
-  const cancelMutation = useMutation({
-    mutationFn: (subscriptionId: string) => paymentsService.cancel(subscriptionId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['current-subscription'] });
-    },
-  });
-
-  const plans: Plan[] = plansData?.data?.data || [];
-  const subscription: Subscription | null = subData?.data?.data || null;
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const res = await plansService.list();
+        setPlans(res.data.data || []);
+      } catch {} finally { setLoadingPlans(false); }
+    };
+    const fetchSub = async () => {
+      try {
+        const res = await subscriptionsService.getCurrent();
+        setSubscription(res.data.data || null);
+      } catch {} finally { setLoadingSub(false); }
+    };
+    fetchPlans();
+    fetchSub();
+  }, []);
 
   const handleSubscribe = (planId: string) => {
     setSelectedPlan(planId);
-    setShowPaymentModal(true);
+    setShowModal(true);
+    setError('');
   };
 
-  const handleConfirmPayment = () => {
+  const handleConfirm = async () => {
     if (!selectedPlan) return;
-    subscribeMutation.mutate({ planId: selectedPlan, method: paymentMethod });
+    setSubmitting(true);
+    setError('');
+    try {
+      await paymentsService.subscribe(selectedPlan, paymentMethod);
+      setShowModal(false);
+      // Refresh subscription
+      const res = await subscriptionsService.getCurrent();
+      setSubscription(res.data.data || null);
+    } catch {
+      setError('Erro ao processar pagamento. Tente novamente.');
+    } finally { setSubmitting(false); }
   };
 
-  const daysRemaining = subscription?.currentPeriodEnd
-    ? differenceInDays(new Date(subscription.currentPeriodEnd), new Date())
-    : 0;
+  const handleCancel = async () => {
+    if (!subscription) return;
+    try {
+      await paymentsService.cancel(subscription.id);
+      setSubscription(null);
+    } catch {}
+  };
+
+  const creditsUsed = subscription?.cleanNameCreditsUsed || 0;
+  const creditsTotal = subscription?.cleanNameCreditsTotal || 0;
+  const creditsPct = creditsTotal > 0 ? (creditsUsed / creditsTotal) * 100 : 0;
 
   return (
-    <div className="space-y-8">
+    <Page>
       {/* Current Subscription */}
+      <div>
+        <SectionHeader>
+          <h2>Meu Plano</h2>
+          <p>Gerencie sua assinatura atual</p>
+        </SectionHeader>
+      </div>
+
       {loadingSub ? (
-        <Card><Skeleton className="h-24 w-full" /></Card>
+        <Card>
+          <div style={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+            Carregando...
+          </div>
+        </Card>
       ) : subscription && subscription.status !== 'CANCELED' ? (
-        <Card className="border-indigo-500/30 bg-gradient-to-r from-indigo-500/5 to-cyan-500/5">
-          <div className="flex items-start justify-between flex-wrap gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-lg font-bold text-[var(--text-primary)]">Plano Atual</h3>
-                <Badge variant={subscription.status === 'ACTIVE' ? 'success' : 'warning'} dot>
-                  {subscription.status === 'ACTIVE' ? 'Ativo' : subscription.status}
-                </Badge>
-              </div>
-              <p className="text-2xl font-black text-[var(--text-primary)]">{subscription.plan?.name}</p>
-              <p className="text-[var(--text-secondary)] mt-1">
-                R$ {Number(subscription.plan?.price).toFixed(2).replace('.', ',')}/mês
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-[var(--text-muted)]">Próxima renovação</p>
-              <p className="text-[var(--text-primary)] font-semibold">
-                {format(new Date(subscription.currentPeriodEnd), 'dd/MM/yyyy')}
-              </p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">{daysRemaining} dias restantes</p>
-            </div>
-          </div>
+        <CurrentPlanCard $active>
+          <PlanRow>
+            <PlanInfo>
+              <h3>Plano Atual <Badge variant="success" dot>Ativo</Badge></h3>
+              <p className="plan-name">{subscription.plan?.name || 'Plano'}</p>
+              <p className="plan-price">R$ {Number(subscription.plan?.price || 0).toFixed(2).replace('.', ',')}/mes</p>
+            </PlanInfo>
+            <PlanRight>
+              <p className="label">Proxima renovacao</p>
+              <p className="value">{new Date(subscription.currentPeriodEnd).toLocaleDateString('pt-BR')}</p>
+            </PlanRight>
+          </PlanRow>
 
-          {/* Credits Bar */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-[var(--text-secondary)]">Créditos Limpa Nome</span>
-              <span className="font-medium text-[var(--text-primary)]">
-                {subscription.cleanNameCreditsUsed}/{subscription.cleanNameCreditsTotal}
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-[var(--bg-tertiary)] overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-all duration-500"
-                style={{
-                  width: `${subscription.cleanNameCreditsTotal > 0
-                    ? (subscription.cleanNameCreditsUsed / subscription.cleanNameCreditsTotal) * 100
-                    : 0}%`,
-                }}
-              />
-            </div>
-          </div>
+          <ProgressBar>
+            <ProgressLabel>
+              <span className="label">Creditos Limpa Nome</span>
+              <span className="value">{creditsUsed}/{creditsTotal}</span>
+            </ProgressLabel>
+            <ProgressTrack>
+              <ProgressFill $pct={creditsPct} />
+            </ProgressTrack>
+          </ProgressBar>
 
-          <div className="mt-4 flex gap-3">
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => cancelMutation.mutate(subscription.id)}
-              loading={cancelMutation.isPending}
-            >
-              Cancelar Assinatura
-            </Button>
-          </div>
-        </Card>
+          <CancelBtn onClick={handleCancel}>Cancelar Assinatura</CancelBtn>
+        </CurrentPlanCard>
       ) : (
-        <Card className="text-center py-6 border-dashed">
-          <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto mb-3" />
-          <p className="font-semibold text-[var(--text-primary)]">Nenhuma assinatura ativa</p>
-          <p className="text-sm text-[var(--text-muted)] mt-1">Escolha um plano abaixo para começar</p>
-        </Card>
+        <EmptyBox>
+          <AlertTriangle size={40} color="#F59E0B" style={{ margin: '0 auto 12px' }} />
+          <p style={{ fontWeight: 600, fontSize: 15 }}>Nenhuma assinatura ativa</p>
+          <p style={{ fontSize: 13, opacity: 0.6, marginTop: 4 }}>Escolha um plano abaixo para comecar</p>
+        </EmptyBox>
       )}
 
       {/* Plans Grid */}
       <div>
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">Planos Disponíveis</h2>
-          <p className="text-[var(--text-secondary)] mt-1">Escolha o plano ideal para você</p>
-        </div>
-
-        {loadingPlans ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <Card key={i}><Skeleton className="h-64 w-full" /></Card>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {plans.map((plan, index) => {
-              const colors = planColors[index % planColors.length];
-              const Icon = planIcons[index % planIcons.length];
-              const isCurrentPlan = subscription?.planId === plan.id && subscription?.status === 'ACTIVE';
-
-              return (
-                <div
-                  key={plan.id}
-                  className={`relative rounded-2xl border p-6 transition-all duration-300 ${
-                    plan.isHighlighted
-                      ? 'border-indigo-500/50 shadow-lg shadow-indigo-500/10 scale-105'
-                      : `${colors.border} hover:shadow-md hover:-translate-y-1`
-                  } bg-[var(--bg-card)]`}
-                >
-                  {plan.isHighlighted && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="px-4 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-violet-500">
-                        MAIS POPULAR
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Plan Header */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className={`h-10 w-10 rounded-xl ${colors.bg} flex items-center justify-center`}>
-                      <Icon className={`h-5 w-5 ${colors.text}`} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-[var(--text-primary)]">{plan.name}</h3>
-                      {plan.trialDays && (
-                        <p className="text-xs text-emerald-500">{plan.trialDays} dias grátis</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Price */}
-                  <div className="mb-6">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-sm text-[var(--text-muted)]">R$</span>
-                      <span className="text-4xl font-black text-[var(--text-primary)]">
-                        {Number(plan.price).toFixed(0)}
-                      </span>
-                      <span className="text-sm text-[var(--text-muted)]">/mês</span>
-                    </div>
-                    <p className="text-xs text-[var(--text-muted)] mt-1">{plan.description}</p>
-                  </div>
-
-                  {/* Features */}
-                  <ul className="space-y-2 mb-6">
-                    {plan.features?.map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                        <CheckCircle className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                    <li className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                      <CheckCircle className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                      {plan.cleanNameCredits} crédito{plan.cleanNameCredits > 1 ? 's' : ''} Limpa Nome
-                    </li>
-                  </ul>
-
-                  {/* CTA */}
-                  {isCurrentPlan ? (
-                    <Badge variant="success" className="w-full justify-center py-2">
-                      Plano Atual
-                    </Badge>
-                  ) : (
-                    <Button
-                      className="w-full"
-                      variant={plan.isHighlighted ? 'primary' : 'outline'}
-                      onClick={() => handleSubscribe(plan.id)}
-                    >
-                      {subscription ? 'Trocar para este plano' : 'Assinar agora'}
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <SectionHeader>
+          <h2>Planos Disponiveis</h2>
+          <p>Escolha o plano ideal para voce</p>
+        </SectionHeader>
       </div>
 
-      {/* Payment Modal */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-md animate-fade-in">
-            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-6">Escolha a forma de pagamento</h3>
+      {loadingPlans ? (
+        <PlansGrid>
+          {[1,2,3].map(i => (
+            <Card key={i}>
+              <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+                Carregando...
+              </div>
+            </Card>
+          ))}
+        </PlansGrid>
+      ) : (
+        <PlansGrid>
+          {plans.map((plan, index) => {
+            const colors = planColorSets[index % planColorSets.length];
+            const Icon = planIcons[index % planIcons.length];
+            const isCurrent = subscription?.planId === plan.id && subscription?.status === 'ACTIVE';
 
-            <div className="space-y-3 mb-6">
-              {[
-                { value: 'CREDIT_CARD' as PaymentMethod, icon: CreditCard, label: 'Cartão de Crédito', desc: 'Visa, Mastercard, Elo' },
-                { value: 'PIX' as PaymentMethod, icon: QrCode, label: 'PIX', desc: 'Pagamento instantâneo' },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setPaymentMethod(option.value)}
-                  className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
-                    paymentMethod === option.value
-                      ? 'border-indigo-500 bg-indigo-500/10'
-                      : 'border-[var(--border-color)] hover:border-indigo-500/50'
-                  }`}
-                >
-                  <option.icon className={`h-6 w-6 ${paymentMethod === option.value ? 'text-indigo-500' : 'text-[var(--text-muted)]'}`} />
-                  <div className="text-left">
-                    <p className="font-medium text-[var(--text-primary)]">{option.label}</p>
-                    <p className="text-xs text-[var(--text-muted)]">{option.desc}</p>
-                  </div>
-                  {paymentMethod === option.value && (
-                    <CheckCircle className="h-5 w-5 text-indigo-500 ml-auto" />
-                  )}
-                </button>
-              ))}
-            </div>
+            return (
+              <PlanCard key={plan.id} $highlighted={plan.isHighlighted}>
+                {plan.isHighlighted && <PopularTag>MAIS POPULAR</PopularTag>}
 
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowPaymentModal(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={handleConfirmPayment}
-                loading={subscribeMutation.isPending}
-              >
-                Confirmar
-              </Button>
-            </div>
+                <PlanIconBox $bg={colors.bg} $color={colors.color}>
+                  <Icon size={22} />
+                </PlanIconBox>
 
-            {subscribeMutation.isError && (
-              <p className="mt-3 text-sm text-rose-500 text-center">
-                Erro ao processar pagamento. Tente novamente.
-              </p>
-            )}
-          </Card>
-        </div>
+                <PlanName>{plan.name}</PlanName>
+                {plan.trialDays && <PlanTrialNote>{plan.trialDays} dias gratis</PlanTrialNote>}
+
+                <PriceRow>
+                  <span className="currency">R$</span>
+                  <span className="amount">{Number(plan.price).toFixed(0)}</span>
+                  <span className="period">/mes</span>
+                </PriceRow>
+
+                {plan.description && <PlanDesc>{plan.description}</PlanDesc>}
+
+                <FeatureList>
+                  {plan.features?.map(f => (
+                    <FeatureItem key={f}>
+                      <CheckCircle size={16} color="#10B981" />
+                      {f}
+                    </FeatureItem>
+                  ))}
+                  <FeatureItem>
+                    <CheckCircle size={16} color="#10B981" />
+                    {plan.cleanNameCredits} credito{plan.cleanNameCredits > 1 ? 's' : ''} Limpa Nome
+                  </FeatureItem>
+                </FeatureList>
+
+                {isCurrent ? (
+                  <CurrentBadge>Plano Atual</CurrentBadge>
+                ) : (
+                  <SubscribeBtn $primary={plan.isHighlighted} onClick={() => handleSubscribe(plan.id)}>
+                    {subscription ? 'Trocar para este plano' : 'Assinar agora'}
+                  </SubscribeBtn>
+                )}
+              </PlanCard>
+            );
+          })}
+        </PlansGrid>
       )}
-    </div>
+
+      {/* Payment Modal */}
+      {showModal && (
+        <Overlay>
+          <ModalCard>
+            <ModalTitle>
+              <h3>Forma de Pagamento</h3>
+              <CloseBtn onClick={() => setShowModal(false)}><X size={20} /></CloseBtn>
+            </ModalTitle>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+              <PaymentOption $selected={paymentMethod === 'CREDIT_CARD'} onClick={() => setPaymentMethod('CREDIT_CARD')}>
+                <CreditCard size={22} color={paymentMethod === 'CREDIT_CARD' ? '#6366F1' : '#999'} />
+                <PayOptionText>
+                  <div className="label">Cartao de Credito</div>
+                  <div className="desc">Visa, Mastercard, Elo</div>
+                </PayOptionText>
+                {paymentMethod === 'CREDIT_CARD' && <CheckCircle size={20} color="#6366F1" />}
+              </PaymentOption>
+
+              <PaymentOption $selected={paymentMethod === 'PIX'} onClick={() => setPaymentMethod('PIX')}>
+                <QrCode size={22} color={paymentMethod === 'PIX' ? '#6366F1' : '#999'} />
+                <PayOptionText>
+                  <div className="label">PIX</div>
+                  <div className="desc">Pagamento instantaneo</div>
+                </PayOptionText>
+                {paymentMethod === 'PIX' && <CheckCircle size={20} color="#6366F1" />}
+              </PaymentOption>
+            </div>
+
+            <ModalActions>
+              <ModalBtn onClick={() => setShowModal(false)}>Cancelar</ModalBtn>
+              <ModalBtn $primary onClick={handleConfirm} disabled={submitting}>
+                {submitting ? 'Processando...' : 'Confirmar'}
+              </ModalBtn>
+            </ModalActions>
+
+            {error && <ErrorText>{error}</ErrorText>}
+          </ModalCard>
+        </Overlay>
+      )}
+    </Page>
   );
 };

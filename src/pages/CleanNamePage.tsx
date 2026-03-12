@@ -1,8 +1,5 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import React, { useState, useEffect } from 'react';
+import styled, { keyframes } from 'styled-components';
 import {
   FileCheck,
   Plus,
@@ -10,210 +7,407 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Loader2,
-  ChevronRight,
-  FileText,
-  DollarSign,
   Building2,
+  DollarSign,
+  X,
 } from 'lucide-react';
-import { Card, Badge, Button, Input, Skeleton } from '@/components/ui';
-import { cleanNameService } from '@/services/api';
-import type { CleanNameRequest, CleanNameStats } from '@/types';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useAuthStore } from '../store';
+import { cleanNameService } from '../services/api';
+import { Card, Badge } from '../components/ui';
 
-const schema = z.object({
-  creditorName: z.string().min(3, 'Nome do credor deve ter no mínimo 3 caracteres'),
-  debtAmount: z.string().optional(),
-  description: z.string().optional(),
-});
+/* ─── Animations ──────────────────────────────────────────────────────────── */
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
 
-type FormData = z.infer<typeof schema>;
+/* ─── Styled Components ───────────────────────────────────────────────────── */
+const Page = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: ${fadeIn} 0.4s ease;
+`;
 
-const statusConfig = {
-  PENDING: { label: 'Pendente', variant: 'warning' as const, icon: Clock },
-  IN_PROGRESS: { label: 'Em Andamento', variant: 'info' as const, icon: Loader2 },
-  COMPLETED: { label: 'Concluído', variant: 'success' as const, icon: CheckCircle2 },
-  FAILED: { label: 'Falhou', variant: 'danger' as const, icon: XCircle },
-  CANCELED: { label: 'Cancelado', variant: 'default' as const, icon: XCircle },
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  @media (max-width: 1024px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 640px) { grid-template-columns: 1fr; }
+`;
+
+const StatCard = styled(Card)`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+`;
+
+const StatIcon = styled.div<{ $bg: string; $color: string }>`
+  width: 48px;
+  height: 48px;
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${p => p.$bg};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: ${p => p.$color};
+`;
+
+const StatInfo = styled.div`
+  .value { font-size: 24px; font-weight: 800; color: ${({ theme }) => theme.text.primary}; line-height: 1.1; }
+  .label { font-size: 12px; color: ${({ theme }) => theme.text.muted}; margin-top: 2px; }
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+`;
+
+const SectionText = styled.div`
+  h2 { font-size: 18px; font-weight: 700; color: ${({ theme }) => theme.text.primary}; margin: 0 0 2px 0; }
+  p { font-size: 13px; color: ${({ theme }) => theme.text.muted}; margin: 0; }
+`;
+
+const NewBtn = styled.button<{ disabled?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  background: ${({ theme }) => theme.accent.gradient};
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: ${p => p.disabled ? 'not-allowed' : 'pointer'};
+  opacity: ${p => p.disabled ? 0.5 : 1};
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+  &:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(99,102,241,0.4); transform: translateY(-1px); }
+`;
+
+const WarningBox = styled(Card)`
+  border-color: rgba(245,158,11,0.3);
+  background: rgba(245,158,11,0.05);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const RequestItem = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: ${({ theme }) => theme.radius.md};
+  border: 1px solid ${({ theme }) => theme.border.default};
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.accent.primary}30;
+    background: ${({ theme }) => theme.bg.cardHover};
+  }
+`;
+
+const ReqIcon = styled.div`
+  width: 42px;
+  height: 42px;
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.bg.tertiary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: ${({ theme }) => theme.text.muted};
+`;
+
+const ReqInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+  .name { font-size: 14px; font-weight: 600; color: ${({ theme }) => theme.text.primary}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .date { font-size: 12px; color: ${({ theme }) => theme.text.muted}; margin-top: 2px; }
+`;
+
+const EmptyList = styled.div`
+  text-align: center;
+  padding: 48px 24px;
+  color: ${({ theme }) => theme.text.muted};
+`;
+
+/* Modal */
+const Overlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+`;
+
+const ModalCard = styled(Card)`
+  width: 100%;
+  max-width: 500px;
+  animation: ${fadeIn} 0.3s ease;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  h3 { font-size: 18px; font-weight: 700; color: ${({ theme }) => theme.text.primary}; margin: 0; }
+`;
+
+const CloseBtn = styled.button`
+  background: transparent;
+  border: none;
+  color: ${({ theme }) => theme.text.muted};
+  cursor: pointer;
+  padding: 4px;
+  &:hover { color: ${({ theme }) => theme.text.primary}; }
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+`;
+
+const FormLabel = styled.label`
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.text.secondary};
+`;
+
+const FormInput = styled.input`
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1.5px solid ${({ theme }) => theme.border.default};
+  background: ${({ theme }) => theme.bg.input};
+  color: ${({ theme }) => theme.text.primary};
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+  &:focus { border-color: ${({ theme }) => theme.accent.primary}; }
+  &::placeholder { color: ${({ theme }) => theme.text.muted}; }
+`;
+
+const FormTextarea = styled.textarea`
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1.5px solid ${({ theme }) => theme.border.default};
+  background: ${({ theme }) => theme.bg.input};
+  color: ${({ theme }) => theme.text.primary};
+  font-size: 14px;
+  outline: none;
+  resize: none;
+  transition: border-color 0.2s ease;
+  &:focus { border-color: ${({ theme }) => theme.accent.primary}; }
+  &::placeholder { color: ${({ theme }) => theme.text.muted}; }
+`;
+
+const NoteBox = styled.div`
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.2);
+  font-size: 12px;
+  color: #D97706;
+  margin-bottom: 20px;
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+const ModalBtn = styled.button<{ $primary?: boolean }>`
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: ${({ $primary, theme }) => $primary ? 'none' : `1.5px solid ${theme.border.default}`};
+  background: ${({ $primary, theme }) => $primary ? theme.accent.gradient : 'transparent'};
+  color: ${({ $primary, theme }) => $primary ? 'white' : theme.text.primary};
+`;
+
+const ErrorText = styled.p`
+  color: ${({ theme }) => theme.status.danger};
+  font-size: 12px;
+  margin-top: 4px;
+`;
+
+/* ─── Types ───────────────────────────────────────────────────────────────── */
+interface Stats {
+  creditsRemaining: number;
+  totalRequests: number;
+  pendingRequests: number;
+  completedRequests: number;
+}
+
+interface Request {
+  id: string;
+  creditorName: string;
+  debtAmount?: number;
+  status: string;
+  createdAt: string;
+}
+
+const statusMap: Record<string, { label: string; variant: 'success' | 'warning' | 'info' | 'danger' | 'default' }> = {
+  PENDING: { label: 'Pendente', variant: 'warning' },
+  IN_PROGRESS: { label: 'Em Andamento', variant: 'info' },
+  COMPLETED: { label: 'Concluido', variant: 'success' },
+  FAILED: { label: 'Falhou', variant: 'danger' },
+  CANCELED: { label: 'Cancelado', variant: 'default' },
 };
 
+/* ─── Component ───────────────────────────────────────────────────────────── */
 export const CleanNamePage: React.FC = () => {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [requests, setRequests] = useState<Request[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<CleanNameRequest | null>(null);
-  const queryClient = useQueryClient();
+  const [submitting, setSubmitting] = useState(false);
+  const [creditorName, setCreditorName] = useState('');
+  const [debtAmount, setDebtAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [formError, setFormError] = useState('');
 
-  const { data: statsData, isLoading: loadingStats } = useQuery({
-    queryKey: ['clean-name-stats'],
-    queryFn: () => cleanNameService.stats(),
-  });
+  const fetchData = async () => {
+    try {
+      const [statsRes, reqRes] = await Promise.all([
+        cleanNameService.stats(),
+        cleanNameService.list(),
+      ]);
+      setStats(statsRes.data.data || null);
+      setRequests(reqRes.data.data?.data || reqRes.data.data || []);
+    } catch {} finally { setLoading(false); }
+  };
 
-  const { data: requestsData, isLoading: loadingRequests } = useQuery({
-    queryKey: ['clean-name-requests'],
-    queryFn: () => cleanNameService.list(),
-  });
+  useEffect(() => { fetchData(); }, []);
 
-  const createMutation = useMutation({
-    mutationFn: (data: object) => cleanNameService.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clean-name-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['clean-name-stats'] });
+  const handleCreate = async () => {
+    if (!creditorName.trim()) {
+      setFormError('Nome do credor e obrigatorio');
+      return;
+    }
+    setSubmitting(true);
+    setFormError('');
+    try {
+      await cleanNameService.create({
+        creditorName: creditorName.trim(),
+        debtAmount: debtAmount ? parseFloat(debtAmount) : undefined,
+        description: description.trim() || undefined,
+      });
       setShowForm(false);
-      reset();
-    },
-  });
-
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
-    resolver: zodResolver(schema),
-  });
-
-  const stats: CleanNameStats | null = statsData?.data?.data || null;
-  const requests: CleanNameRequest[] = requestsData?.data?.data?.data || [];
-
-  const onSubmit = async (data: FormData) => {
-    await createMutation.mutateAsync({
-      creditorName: data.creditorName,
-      debtAmount: data.debtAmount ? parseFloat(data.debtAmount) : undefined,
-      description: data.description,
-    });
+      setCreditorName('');
+      setDebtAmount('');
+      setDescription('');
+      fetchData();
+    } catch {
+      setFormError('Erro ao criar solicitacao. Tente novamente.');
+    } finally { setSubmitting(false); }
   };
 
   return (
-    <div className="space-y-6">
+    <Page>
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          {
-            label: 'Créditos Disponíveis',
-            value: loadingStats ? '—' : stats?.creditsRemaining ?? '0',
-            icon: FileCheck,
-            color: 'text-emerald-500',
-            bg: 'bg-emerald-500/10',
-          },
-          {
-            label: 'Total Solicitações',
-            value: loadingStats ? '—' : stats?.totalRequests ?? '0',
-            icon: FileText,
-            color: 'text-indigo-500',
-            bg: 'bg-indigo-500/10',
-          },
-          {
-            label: 'Em Andamento',
-            value: loadingStats ? '—' : stats?.pendingRequests ?? '0',
-            icon: Clock,
-            color: 'text-amber-500',
-            bg: 'bg-amber-500/10',
-          },
-          {
-            label: 'Concluídas',
-            value: loadingStats ? '—' : stats?.completedRequests ?? '0',
-            icon: CheckCircle2,
-            color: 'text-cyan-500',
-            bg: 'bg-cyan-500/10',
-          },
-        ].map((stat) => (
-          <Card key={stat.label} className="flex items-center gap-4">
-            <div className={`h-12 w-12 rounded-xl ${stat.bg} flex items-center justify-center flex-shrink-0`}>
-              <stat.icon className={`h-6 w-6 ${stat.color}`} />
-            </div>
-            <div>
-              {loadingStats ? (
-                <Skeleton className="h-6 w-12 mb-1" />
-              ) : (
-                <p className="text-2xl font-bold text-[var(--text-primary)]">{stat.value}</p>
-              )}
-              <p className="text-xs text-[var(--text-muted)]">{stat.label}</p>
-            </div>
-          </Card>
-        ))}
-      </div>
+      <StatsGrid>
+        <StatCard>
+          <StatIcon $bg="rgba(16,185,129,0.12)" $color="#10B981"><FileCheck size={22} /></StatIcon>
+          <StatInfo>
+            <div className="value">{loading ? '—' : stats?.creditsRemaining ?? 0}</div>
+            <div className="label">Creditos Disponiveis</div>
+          </StatInfo>
+        </StatCard>
+        <StatCard>
+          <StatIcon $bg="rgba(99,102,241,0.12)" $color="#6366F1"><FileCheck size={22} /></StatIcon>
+          <StatInfo>
+            <div className="value">{loading ? '—' : stats?.totalRequests ?? 0}</div>
+            <div className="label">Total Solicitacoes</div>
+          </StatInfo>
+        </StatCard>
+        <StatCard>
+          <StatIcon $bg="rgba(245,158,11,0.12)" $color="#F59E0B"><Clock size={22} /></StatIcon>
+          <StatInfo>
+            <div className="value">{loading ? '—' : stats?.pendingRequests ?? 0}</div>
+            <div className="label">Em Andamento</div>
+          </StatInfo>
+        </StatCard>
+        <StatCard>
+          <StatIcon $bg="rgba(6,182,212,0.12)" $color="#06B6D4"><CheckCircle2 size={22} /></StatIcon>
+          <StatInfo>
+            <div className="value">{loading ? '—' : stats?.completedRequests ?? 0}</div>
+            <div className="label">Concluidas</div>
+          </StatInfo>
+        </StatCard>
+      </StatsGrid>
 
-      {/* Header + New Request Button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-[var(--text-primary)]">Minhas Solicitações</h2>
-          <p className="text-sm text-[var(--text-muted)]">Acompanhe o status das suas solicitações</p>
-        </div>
-        <Button
-          onClick={() => setShowForm(true)}
-          leftIcon={<Plus className="h-4 w-4" />}
-          disabled={!stats || stats.creditsRemaining <= 0}
-        >
-          Nova Solicitação
-        </Button>
-      </div>
+      {/* Header */}
+      <SectionHeader>
+        <SectionText>
+          <h2>Minhas Solicitacoes</h2>
+          <p>Acompanhe o status das suas solicitacoes</p>
+        </SectionText>
+        <NewBtn onClick={() => setShowForm(true)} disabled={!stats || stats.creditsRemaining <= 0}>
+          <Plus size={16} /> Nova Solicitacao
+        </NewBtn>
+      </SectionHeader>
 
       {/* No Credits Warning */}
       {stats && stats.creditsRemaining <= 0 && (
-        <Card className="border-amber-500/30 bg-amber-500/5">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-            <div>
-              <p className="font-medium text-[var(--text-primary)]">Créditos esgotados</p>
-              <p className="text-sm text-[var(--text-muted)]">
-                Você não possui créditos disponíveis. Faça upgrade do seu plano para continuar.
-              </p>
-            </div>
+        <WarningBox>
+          <AlertCircle size={20} color="#F59E0B" />
+          <div>
+            <p style={{ fontWeight: 600, fontSize: 14 }}>Creditos esgotados</p>
+            <p style={{ fontSize: 13, opacity: 0.7 }}>Faca upgrade do seu plano para continuar.</p>
           </div>
-        </Card>
+        </WarningBox>
       )}
 
       {/* Requests List */}
       <Card>
-        {loadingRequests ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-xl border border-[var(--border-color)]">
-                <Skeleton className="h-10 w-10 rounded-xl" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-                <Skeleton className="h-6 w-20 rounded-full" />
-              </div>
-            ))}
-          </div>
+        {loading ? (
+          <div style={{ padding: 32, textAlign: 'center', color: '#999' }}>Carregando...</div>
         ) : requests.length === 0 ? (
-          <div className="text-center py-12">
-            <FileCheck className="h-16 w-16 text-[var(--text-muted)] mx-auto mb-4 opacity-50" />
-            <p className="text-[var(--text-secondary)] font-medium">Nenhuma solicitação ainda</p>
-            <p className="text-[var(--text-muted)] text-sm mt-1">
-              Clique em "Nova Solicitação" para começar
-            </p>
-          </div>
+          <EmptyList>
+            <FileCheck size={48} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
+            <p style={{ fontWeight: 600, fontSize: 14 }}>Nenhuma solicitacao ainda</p>
+            <p style={{ fontSize: 13, marginTop: 4 }}>Clique em "Nova Solicitacao" para comecar</p>
+          </EmptyList>
         ) : (
-          <div className="space-y-3">
-            {requests.map((request) => {
-              const status = statusConfig[request.status] || statusConfig.PENDING;
-              const StatusIcon = status.icon;
-
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {requests.map(req => {
+              const st = statusMap[req.status] || statusMap.PENDING;
               return (
-                <button
-                  key={request.id}
-                  onClick={() => setSelectedRequest(request)}
-                  className="w-full flex items-center gap-4 p-4 rounded-xl border border-[var(--border-color)] hover:border-indigo-500/30 hover:bg-[var(--bg-tertiary)] transition-all text-left group"
-                >
-                  <div className="h-10 w-10 rounded-xl bg-[var(--bg-tertiary)] flex items-center justify-center flex-shrink-0">
-                    <Building2 className="h-5 w-5 text-[var(--text-muted)]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-[var(--text-primary)] truncate">{request.creditorName}</p>
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                      {format(new Date(request.createdAt), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                      {request.debtAmount && (
-                        <span className="ml-2">
-                          · R$ {Number(request.debtAmount).toFixed(2).replace('.', ',')}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant={status.variant} dot>
-                      {status.label}
-                    </Badge>
-                    <ChevronRight className="h-4 w-4 text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors" />
-                  </div>
-                </button>
+                <RequestItem key={req.id}>
+                  <ReqIcon><Building2 size={20} /></ReqIcon>
+                  <ReqInfo>
+                    <div className="name">{req.creditorName}</div>
+                    <div className="date">
+                      {new Date(req.createdAt).toLocaleDateString('pt-BR')}
+                      {req.debtAmount && ` · R$ ${Number(req.debtAmount).toFixed(2).replace('.', ',')}`}
+                    </div>
+                  </ReqInfo>
+                  <Badge variant={st.variant} dot>{st.label}</Badge>
+                </RequestItem>
               );
             })}
           </div>
@@ -222,163 +416,58 @@ export const CleanNamePage: React.FC = () => {
 
       {/* New Request Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-lg animate-fade-in">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-[var(--text-primary)]">Nova Solicitação de Limpa Nome</h3>
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
-            </div>
+        <Overlay>
+          <ModalCard>
+            <ModalHeader>
+              <h3>Nova Solicitacao de Limpa Nome</h3>
+              <CloseBtn onClick={() => setShowForm(false)}><X size={20} /></CloseBtn>
+            </ModalHeader>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <Input
-                label="Nome do Credor *"
+            <FormGroup>
+              <FormLabel>Nome do Credor *</FormLabel>
+              <FormInput
                 placeholder="Ex: Banco XYZ, Loja ABC"
-                leftIcon={<Building2 className="h-4 w-4" />}
-                error={errors.creditorName?.message}
-                {...register('creditorName')}
+                value={creditorName}
+                onChange={e => setCreditorName(e.target.value)}
               />
+            </FormGroup>
 
-              <Input
-                label="Valor da Dívida (opcional)"
+            <FormGroup>
+              <FormLabel>Valor da Divida (opcional)</FormLabel>
+              <FormInput
                 type="number"
                 placeholder="0,00"
-                leftIcon={<DollarSign className="h-4 w-4" />}
-                {...register('debtAmount')}
+                value={debtAmount}
+                onChange={e => setDebtAmount(e.target.value)}
               />
+            </FormGroup>
 
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-[var(--text-secondary)]">
-                  Descrição (opcional)
-                </label>
-                <textarea
-                  placeholder="Descreva detalhes sobre a dívida..."
-                  className="w-full rounded-xl border px-3 py-2.5 text-sm transition-all duration-200 bg-[var(--bg-tertiary)] border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--border-focus)] focus:ring-2 focus:ring-indigo-500/20 resize-none"
-                  rows={3}
-                  {...register('description')}
-                />
-              </div>
+            <FormGroup>
+              <FormLabel>Descricao (opcional)</FormLabel>
+              <FormTextarea
+                rows={3}
+                placeholder="Descreva detalhes sobre a divida..."
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+              />
+            </FormGroup>
 
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  <strong>Atenção:</strong> Esta solicitação consumirá 1 crédito do seu plano.
-                  Você possui {stats?.creditsRemaining ?? 0} crédito(s) disponível(is).
-                </p>
-              </div>
+            <NoteBox>
+              <strong>Atencao:</strong> Esta solicitacao consumira 1 credito do seu plano.
+              Voce possui {stats?.creditsRemaining ?? 0} credito(s) disponivel(is).
+            </NoteBox>
 
-              <div className="flex gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setShowForm(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1"
-                  loading={isSubmitting || createMutation.isPending}
-                  leftIcon={<FileCheck className="h-4 w-4" />}
-                >
-                  Enviar Solicitação
-                </Button>
-              </div>
+            {formError && <ErrorText>{formError}</ErrorText>}
 
-              {createMutation.isError && (
-                <p className="text-sm text-rose-500 text-center">
-                  Erro ao criar solicitação. Verifique seus créditos e tente novamente.
-                </p>
-              )}
-            </form>
-          </Card>
-        </div>
+            <ModalActions>
+              <ModalBtn onClick={() => setShowForm(false)}>Cancelar</ModalBtn>
+              <ModalBtn $primary onClick={handleCreate} disabled={submitting}>
+                {submitting ? 'Enviando...' : 'Enviar Solicitacao'}
+              </ModalBtn>
+            </ModalActions>
+          </ModalCard>
+        </Overlay>
       )}
-
-      {/* Request Detail Modal */}
-      {selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-lg animate-fade-in">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-[var(--text-primary)]">Detalhes da Solicitação</h3>
-              <button
-                onClick={() => setSelectedRequest(null)}
-                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--text-muted)]">Status</span>
-                <Badge
-                  variant={statusConfig[selectedRequest.status]?.variant || 'default'}
-                  dot
-                >
-                  {statusConfig[selectedRequest.status]?.label || selectedRequest.status}
-                </Badge>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--text-muted)]">Credor</span>
-                <span className="text-sm font-medium text-[var(--text-primary)]">{selectedRequest.creditorName}</span>
-              </div>
-
-              {selectedRequest.debtAmount && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--text-muted)]">Valor</span>
-                  <span className="text-sm font-medium text-[var(--text-primary)]">
-                    R$ {Number(selectedRequest.debtAmount).toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              )}
-
-              {selectedRequest.description && (
-                <div>
-                  <span className="text-sm text-[var(--text-muted)]">Descrição</span>
-                  <p className="text-sm text-[var(--text-primary)] mt-1">{selectedRequest.description}</p>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--text-muted)]">Criado em</span>
-                <span className="text-sm text-[var(--text-secondary)]">
-                  {format(new Date(selectedRequest.createdAt), "dd/MM/yyyy 'às' HH:mm")}
-                </span>
-              </div>
-
-              {selectedRequest.completedAt && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--text-muted)]">Concluído em</span>
-                  <span className="text-sm text-[var(--text-secondary)]">
-                    {format(new Date(selectedRequest.completedAt), "dd/MM/yyyy 'às' HH:mm")}
-                  </span>
-                </div>
-              )}
-
-              {selectedRequest.notes && (
-                <div className="p-3 rounded-xl bg-[var(--bg-tertiary)]">
-                  <p className="text-xs text-[var(--text-muted)] mb-1">Observações</p>
-                  <p className="text-sm text-[var(--text-primary)]">{selectedRequest.notes}</p>
-                </div>
-              )}
-            </div>
-
-            <Button
-              variant="outline"
-              className="w-full mt-6"
-              onClick={() => setSelectedRequest(null)}
-            >
-              Fechar
-            </Button>
-          </Card>
-        </div>
-      )}
-    </div>
+    </Page>
   );
 };

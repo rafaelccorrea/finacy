@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store';
-import { authService } from '@/services/api';
+import { useAuthStore } from '../store';
+import { authService } from '../services/api';
 
 export const AutoLoginPage: React.FC = () => {
   const [status, setStatus] = useState('Conectando ao servidor...');

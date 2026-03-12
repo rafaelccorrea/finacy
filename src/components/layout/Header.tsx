@@ -1,146 +1,131 @@
 import React from 'react';
-import { Bell, Sun, Moon } from 'lucide-react';
-import { useThemeStore, useAuthStore, useUIStore } from '@/store';
+import styled from 'styled-components';
+import { Menu, Sun, Moon, Bell } from 'lucide-react';
+import { useAuthStore, useThemeStore, useUIStore } from '../../store';
+import { Avatar } from '../ui';
+
+const HeaderContainer = styled.header`
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: ${({ theme }) => theme.bg.card};
+  border-bottom: 1px solid ${({ theme }) => theme.border.default};
+  position: sticky;
+  top: 0;
+  z-index: 30;
+`;
+
+const LeftSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+const MenuButton = styled.button`
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background: transparent;
+  border: none;
+  color: ${({ theme }) => theme.text.secondary};
+  transition: all 0.15s ease;
+  &:hover { background: ${({ theme }) => theme.bg.cardHover}; color: ${({ theme }) => theme.text.primary}; }
+  @media (max-width: 768px) { display: flex; }
+`;
+
+const PageTitle = styled.h2`
+  font-size: 18px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.text.primary};
+  margin: 0;
+`;
+
+const RightSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const IconButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background: transparent;
+  border: none;
+  color: ${({ theme }) => theme.text.secondary};
+  transition: all 0.15s ease;
+  position: relative;
+  &:hover { background: ${({ theme }) => theme.bg.cardHover}; color: ${({ theme }) => theme.text.primary}; }
+`;
+
+const NotifDot = styled.span`
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.status.danger};
+  border: 2px solid ${({ theme }) => theme.bg.card};
+`;
+
+const UserSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 8px;
+  padding-left: 16px;
+  border-left: 1px solid ${({ theme }) => theme.border.default};
+`;
+
+const UserName = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.text.primary};
+  @media (max-width: 640px) { display: none; }
+`;
 
 interface HeaderProps {
-  title: string;
-  subtitle?: string;
+  title?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
-  const { theme, toggleTheme } = useThemeStore();
+export const Header: React.FC<HeaderProps> = ({ title = 'Painel' }) => {
   const { user } = useAuthStore();
-  const { sidebarOpen } = useUIStore();
+  const { theme, toggleTheme } = useThemeStore();
+  const { toggleSidebar } = useUIStore();
 
   return (
-    <header
-      style={{
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        left: sidebarOpen ? '256px' : '64px',
-        zIndex: 30,
-        height: '64px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 24px',
-        backgroundColor: 'var(--bg-primary)',
-        borderBottom: '1px solid var(--border-color)',
-        transition: 'left 0.3s ease',
-        backdropFilter: 'blur(12px)',
-      }}
-    >
-      {/* Left: Title */}
-      <div>
-        <h1 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{title}</h1>
-        {subtitle && (
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px', lineHeight: 1 }}>{subtitle}</p>
-        )}
-      </div>
+    <HeaderContainer>
+      <LeftSection>
+        <MenuButton onClick={toggleSidebar}>
+          <Menu size={20} />
+        </MenuButton>
+        <PageTitle>{title}</PageTitle>
+      </LeftSection>
 
-      {/* Right: Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        {/* Theme Toggle */}
-        <button
-          onClick={toggleTheme}
-          aria-label="Alternar tema"
-          title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-          style={{
-            padding: '8px',
-            borderRadius: '10px',
-            color: 'var(--text-muted)',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-tertiary)';
-            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-          }}
-        >
-          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
+      <RightSection>
+        <IconButton onClick={toggleTheme} title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}>
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </IconButton>
 
-        {/* Notifications */}
-        <button
-          title="Notificações"
-          style={{
-            position: 'relative',
-            padding: '8px',
-            borderRadius: '10px',
-            color: 'var(--text-muted)',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-tertiary)';
-            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-          }}
-        >
-          <Bell size={16} />
-          <span
-            style={{
-              position: 'absolute',
-              top: '6px',
-              right: '6px',
-              height: '8px',
-              width: '8px',
-              borderRadius: '50%',
-              backgroundColor: '#F43F5E',
-              border: '2px solid var(--bg-primary)',
-            }}
-          />
-        </button>
+        <IconButton>
+          <Bell size={18} />
+          <NotifDot />
+        </IconButton>
 
-        {/* Divider */}
-        <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)', margin: '0 8px' }} />
-
-        {/* User Avatar */}
-        {user && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-            <div
-              style={{
-                height: '32px',
-                width: '32px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #4F46E5, #06B6D4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <span style={{ color: 'white', fontWeight: 700, fontSize: '13px' }}>
-                {user.name?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div style={{ display: 'none' }} className="sm:block">
-              <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>
-                {user.name?.split(' ')[0]}
-              </p>
-              <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px', textTransform: 'capitalize' }}>
-                {user.role?.toLowerCase().replace('_', ' ')}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-    </header>
+        <UserSection>
+          <Avatar name={user?.name || 'U'} size="sm" />
+          <UserName>{user?.name}</UserName>
+        </UserSection>
+      </RightSection>
+    </HeaderContainer>
   );
 };

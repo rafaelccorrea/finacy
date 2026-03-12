@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '@/types';
+import type { User } from '../types';
 
 // ─── Auth Store ───────────────────────────────────────────────────────────────
 interface AuthState {
@@ -61,12 +61,10 @@ export const useThemeStore = create<ThemeState>()(
 
       toggleTheme: () => {
         const newTheme = get().theme === 'light' ? 'dark' : 'light';
-        document.documentElement.classList.toggle('dark', newTheme === 'dark');
         set({ theme: newTheme });
       },
 
       setTheme: (theme) => {
-        document.documentElement.classList.toggle('dark', theme === 'dark');
         set({ theme });
       },
     }),

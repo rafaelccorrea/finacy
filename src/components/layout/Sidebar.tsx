@@ -1,320 +1,189 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  CreditCard,
-  FileCheck,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  Settings,
-  User,
-} from 'lucide-react';
-import { useAuthStore, useUIStore } from '@/store';
-import { authService } from '@/services/api';
+import styled from 'styled-components';
+import { LayoutDashboard, CreditCard, FileSearch, LogOut, Shield } from 'lucide-react';
+import { useAuthStore, useUIStore } from '../../store';
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Painel' },
-  { to: '/my-plan', icon: CreditCard, label: 'Meu Plano' },
-  { to: '/clean-name', icon: FileCheck, label: 'Limpa Nome' },
-];
+const SidebarContainer = styled.aside<{ $open: boolean }>`
+  width: 260px;
+  min-width: 260px;
+  height: 100vh;
+  background: ${({ theme }) => theme.bg.sidebar};
+  border-right: 1px solid ${({ theme }) => theme.border.default};
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  transition: transform 0.3s ease;
 
-const bottomItems = [
-  { to: '/profile', icon: User, label: 'Perfil' },
-  { to: '/settings', icon: Settings, label: 'Configurações' },
-];
+  @media (max-width: 768px) {
+    transform: ${({ $open }) => $open ? 'translateX(0)' : 'translateX(-100%)'};
+  }
+`;
+
+const Logo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px;
+  margin-bottom: 32px;
+`;
+
+const LogoIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.accent.gradient};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+  flex-shrink: 0;
+`;
+
+const LogoText = styled.div`
+  h1 {
+    font-size: 20px;
+    font-weight: 800;
+    color: ${({ theme }) => theme.text.primary};
+    line-height: 1.2;
+    margin: 0;
+  }
+  span {
+    font-size: 11px;
+    color: ${({ theme }) => theme.text.muted};
+    font-weight: 400;
+  }
+`;
+
+const NavSection = styled.div`
+  margin-bottom: 24px;
+`;
+
+const NavLabel = styled.div`
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: ${({ theme }) => theme.text.muted};
+  padding: 0 12px;
+  margin-bottom: 8px;
+`;
+
+const StyledNavLink = styled(NavLink)`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: ${({ theme }) => theme.radius.md};
+  font-size: 14px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.text.secondary};
+  transition: all 0.15s ease;
+  text-decoration: none;
+  margin-bottom: 2px;
+
+  &:hover {
+    background: ${({ theme }) => theme.bg.cardHover};
+    color: ${({ theme }) => theme.text.primary};
+  }
+
+  &.active {
+    background: ${({ theme }) => theme.accent.primary}15;
+    color: ${({ theme }) => theme.accent.primary};
+    font-weight: 600;
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+`;
+
+const Spacer = styled.div`flex: 1;`;
+
+const LogoutBtn = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: ${({ theme }) => theme.radius.md};
+  font-size: 14px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.status.danger};
+  background: transparent;
+  border: none;
+  width: 100%;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.status.dangerBg};
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const Overlay = styled.div<{ $visible: boolean }>`
+  display: none;
+  @media (max-width: 768px) {
+    display: ${({ $visible }) => $visible ? 'block' : 'none'};
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 40;
+  }
+`;
 
 export const Sidebar: React.FC = () => {
-  const { sidebarOpen, toggleSidebar } = useUIStore();
-  const { user, logout } = useAuthStore();
+  const { logout } = useAuthStore();
+  const { sidebarOpen, setSidebarOpen } = useUIStore();
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-    } finally {
-      logout();
-      navigate('/login');
-    }
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
-    <aside
-      style={{
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        height: '100%',
-        width: sidebarOpen ? '256px' : '64px',
-        zIndex: 40,
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'width 0.3s ease',
-        backgroundColor: '#0D0C1A',
-        borderRight: '1px solid rgba(255,255,255,0.05)',
-      }}
-    >
-      {/* Logo */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          height: '64px',
-          padding: '0 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
-          justifyContent: sidebarOpen ? 'space-between' : 'center',
-        }}
-      >
-        {sidebarOpen ? (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div
-                style={{
-                  height: '36px',
-                  width: '36px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #4F46E5, #06B6D4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  boxShadow: '0 4px 12px rgba(79,70,229,0.4)',
-                }}
-              >
-                <span style={{ color: 'white', fontWeight: 900, fontSize: '16px' }}>F</span>
-              </div>
-              <div>
-                <span style={{ color: 'white', fontWeight: 900, fontSize: '18px', letterSpacing: '-0.5px' }}>Finacy</span>
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', marginTop: '2px' }}>Gestão Financeira</p>
-              </div>
-            </div>
-            <button
-              onClick={toggleSidebar}
-              style={{
-                padding: '6px',
-                borderRadius: '8px',
-                color: 'rgba(255,255,255,0.3)',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'white'; (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.3)'; (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-            >
-              <ChevronLeft size={16} />
-            </button>
-          </>
-        ) : (
-          <>
-            <div
-              style={{
-                height: '36px',
-                width: '36px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #4F46E5, #06B6D4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(79,70,229,0.4)',
-              }}
-            >
-              <span style={{ color: 'white', fontWeight: 900, fontSize: '16px' }}>F</span>
-            </div>
-          </>
-        )}
-      </div>
+    <>
+      <Overlay $visible={sidebarOpen} onClick={() => setSidebarOpen(false)} />
+      <SidebarContainer $open={sidebarOpen}>
+        <Logo>
+          <LogoIcon>
+            <Shield size={22} color="white" />
+          </LogoIcon>
+          <LogoText>
+            <h1>Finacy</h1>
+            <span>Gestao Financeira</span>
+          </LogoText>
+        </Logo>
 
-      {/* Toggle button when collapsed */}
-      {!sidebarOpen && (
-        <button
-          onClick={toggleSidebar}
-          style={{
-            position: 'absolute',
-            right: '-12px',
-            top: '80px',
-            height: '24px',
-            width: '24px',
-            borderRadius: '50%',
-            background: '#4F46E5',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: 'none',
-            cursor: 'pointer',
-            zIndex: 50,
-            boxShadow: '0 2px 8px rgba(79,70,229,0.5)',
-          }}
-        >
-          <ChevronRight size={12} />
-        </button>
-      )}
+        <NavSection>
+          <NavLabel>Menu</NavLabel>
+          <StyledNavLink to="/dashboard" onClick={() => setSidebarOpen(false)}>
+            <LayoutDashboard /> Painel
+          </StyledNavLink>
+          <StyledNavLink to="/my-plan" onClick={() => setSidebarOpen(false)}>
+            <CreditCard /> Meu Plano
+          </StyledNavLink>
+          <StyledNavLink to="/clean-name" onClick={() => setSidebarOpen(false)}>
+            <FileSearch /> Limpa Nome
+          </StyledNavLink>
+        </NavSection>
 
-      {/* Navigation */}
-      <nav style={{ flex: 1, padding: '24px 12px 12px', overflowY: 'auto' }}>
-        {sidebarOpen && (
-          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 12px', marginBottom: '12px' }}>
-            Menu
-          </p>
-        )}
-        {navItems.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            title={!sidebarOpen ? label : undefined}
-            style={{ textDecoration: 'none' }}
-          >
-            {({ isActive }) => (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '10px 12px',
-                  borderRadius: '12px',
-                  marginBottom: '4px',
-                  cursor: 'pointer',
-                  justifyContent: sidebarOpen ? 'flex-start' : 'center',
-                  background: isActive
-                    ? 'linear-gradient(135deg, #4F46E5, #06B6D4)'
-                    : 'transparent',
-                  color: isActive ? 'white' : 'rgba(255,255,255,0.5)',
-                  boxShadow: isActive ? '0 4px 12px rgba(79,70,229,0.25)' : 'none',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(255,255,255,0.08)';
-                    (e.currentTarget as HTMLDivElement).style.color = 'white';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
-                    (e.currentTarget as HTMLDivElement).style.color = 'rgba(255,255,255,0.5)';
-                  }
-                }}
-              >
-                <Icon size={20} style={{ flexShrink: 0 }} />
-                {sidebarOpen && <span style={{ fontWeight: 500, fontSize: '14px' }}>{label}</span>}
-              </div>
-            )}
-          </NavLink>
-        ))}
-      </nav>
+        <Spacer />
 
-      {/* Bottom section */}
-      <div style={{ padding: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        {sidebarOpen && (
-          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 12px', marginBottom: '12px' }}>
-            Conta
-          </p>
-        )}
-
-        {bottomItems.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            title={!sidebarOpen ? label : undefined}
-            style={{ textDecoration: 'none' }}
-          >
-            {({ isActive }) => (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '10px 12px',
-                  borderRadius: '12px',
-                  marginBottom: '4px',
-                  cursor: 'pointer',
-                  justifyContent: sidebarOpen ? 'flex-start' : 'center',
-                  background: isActive ? 'rgba(255,255,255,0.15)' : 'transparent',
-                  color: isActive ? 'white' : 'rgba(255,255,255,0.4)',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(255,255,255,0.08)';
-                    (e.currentTarget as HTMLDivElement).style.color = 'white';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
-                    (e.currentTarget as HTMLDivElement).style.color = 'rgba(255,255,255,0.4)';
-                  }
-                }}
-              >
-                <Icon size={16} style={{ flexShrink: 0 }} />
-                {sidebarOpen && <span style={{ fontSize: '14px' }}>{label}</span>}
-              </div>
-            )}
-          </NavLink>
-        ))}
-
-        {/* User info */}
-        {sidebarOpen && user && (
-          <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div
-                style={{
-                  height: '28px',
-                  width: '28px',
-                  borderRadius: '8px',
-                  background: 'linear-gradient(135deg, #4F46E5, #06B6D4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <span style={{ color: 'white', fontWeight: 700, fontSize: '12px' }}>
-                  {user.name?.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <p style={{ color: 'white', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</p>
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{user.email}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          title={!sidebarOpen ? 'Sair' : undefined}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '10px 12px',
-            borderRadius: '12px',
-            marginTop: '4px',
-            color: 'rgba(248,113,113,0.7)',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            justifyContent: sidebarOpen ? 'flex-start' : 'center',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.color = '#FCA5A5';
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(239,68,68,0.1)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(248,113,113,0.7)';
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-          }}
-        >
-          <LogOut size={16} style={{ flexShrink: 0 }} />
-          {sidebarOpen && <span style={{ fontSize: '14px', fontWeight: 500 }}>Sair</span>}
-        </button>
-      </div>
-    </aside>
+        <LogoutBtn onClick={handleLogout}>
+          <LogOut /> Sair
+        </LogoutBtn>
+      </SidebarContainer>
+    </>
   );
 };

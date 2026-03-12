@@ -1,5 +1,4 @@
 import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
-import type { ApiError } from '@/types';
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -24,7 +23,7 @@ api.interceptors.request.use(
 // ─── Response Interceptor ─────────────────────────────────────────────────────
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
-  async (error: AxiosError<ApiError>) => {
+  async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -75,6 +74,7 @@ export const plansService = {
 // ─── Subscriptions Service ────────────────────────────────────────────────────
 export const subscriptionsService = {
   current: () => api.get('/subscriptions/current'),
+  getCurrent: () => api.get('/subscriptions/current'),
   history: () => api.get('/subscriptions/history'),
   dashboard: () => api.get('/subscriptions/dashboard'),
 };
