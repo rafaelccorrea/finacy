@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { LayoutDashboard, CreditCard, FileSearch, LogOut } from 'lucide-react';
+import { LayoutDashboard, CreditCard, FileSearch, LogOut, Zap } from 'lucide-react';
 import { useAuthStore, useUIStore } from '../../store';
 
 const SidebarContainer = styled.aside<{ $open: boolean }>`
@@ -167,6 +167,9 @@ export const Sidebar: React.FC = () => {
           </StyledNavLink>
           <StyledNavLink to="/clean-name" onClick={() => setSidebarOpen(false)}>
             <FileSearch /> Limpa Nome
+          </StyledNavLink>
+          <StyledNavLink to="/buy-credits" onClick={() => setSidebarOpen(false)}>
+            <Zap /> Comprar Créditos
           </StyledNavLink>
         </NavSection>
 
