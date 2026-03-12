@@ -9,13 +9,18 @@ import {
   CreditCard,
   QrCode,
   X,
+  ArrowRight,
+  Calendar,
+  ExternalLink,
+  Loader,
+  Shield,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store';
 import { plansService, subscriptionsService, paymentsService } from '../services/api';
 import { Card, Badge } from '../components/ui';
 
 /* ─── Animations ──────────────────────────────────────────────────────────── */
+const spin = keyframes`from { transform: rotate(0deg); } to { transform: rotate(360deg); }`;
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -116,8 +121,30 @@ const ProgressFill = styled.div<{ $pct: number }>`
   transition: width 0.5s ease;
 `;
 
-const CancelBtn = styled.button`
+const PlanActionsRow = styled.div`
+  display: flex;
+  gap: 10px;
   margin-top: 16px;
+  flex-wrap: wrap;
+`;
+
+const ManageBtn = styled.button`
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.border.default};
+  background: transparent;
+  color: ${({ theme }) => theme.text.secondary};
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  &:hover { border-color: ${({ theme }) => theme.accent.primary}; color: ${({ theme }) => theme.accent.primary}; }
+`;
+
+const CancelBtn = styled.button`
   padding: 8px 16px;
   border-radius: 10px;
   border: 1px solid ${({ theme }) => theme.status.danger}40;
@@ -129,6 +156,67 @@ const CancelBtn = styled.button`
   transition: all 0.2s ease;
   &:hover { background: ${({ theme }) => theme.status.danger}20; }
 `;
+
+const CreditsCard = styled.div`
+  background: linear-gradient(135deg, ${({ theme }) => theme.accent.primary}15, ${({ theme }) => theme.accent.secondary}10);
+  border: 1px solid ${({ theme }) => theme.accent.primary}30;
+  border-radius: ${({ theme }) => theme.radius.lg};
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+`;
+
+const CreditsInfo = styled.div``;
+const CreditsLabel = styled.p`
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: ${({ theme }) => theme.text.muted};
+  margin: 0 0 4px;
+`;
+const CreditsValue = styled.p`
+  font-size: 32px;
+  font-weight: 800;
+  color: ${({ theme }) => theme.accent.primary};
+  margin: 0;
+  line-height: 1;
+`;
+const CreditsSub = styled.p`
+  font-size: 13px;
+  color: ${({ theme }) => theme.text.secondary};
+  margin: 6px 0 0;
+`;
+
+const BuyMoreBtn = styled.button`
+  padding: 12px 24px;
+  background: ${({ theme }) => theme.accent.gradient};
+  color: #fff;
+  border: none;
+  border-radius: ${({ theme }) => theme.radius.md};
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  &:hover { opacity: 0.9; transform: translateY(-1px); }
+`;
+
+const SecurityNote = styled.p`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: ${({ theme }) => theme.text.muted};
+  margin: 0;
+`;
+
+const SpinLoader = styled(Loader)`animation: ${spin} 1s linear infinite;`;
 
 /* Empty State */
 const EmptyBox = styled(Card)`
@@ -247,6 +335,10 @@ const SubscribeBtn = styled.button<{ $primary?: boolean }>`
   background: ${({ $primary, theme }) => $primary ? theme.accent.gradient : 'transparent'};
   color: ${({ $primary, theme }) => $primary ? 'white' : theme.text.primary};
   box-shadow: ${({ $primary }) => $primary ? '0 4px 14px rgba(99,102,241,0.3)' : 'none'};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 
   &:hover {
     transform: translateY(-1px);
@@ -254,6 +346,7 @@ const SubscribeBtn = styled.button<{ $primary?: boolean }>`
       ? '0 6px 20px rgba(99,102,241,0.4)'
       : '0 4px 12px rgba(0,0,0,0.1)'};
   }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const CurrentBadge = styled.div`
@@ -263,9 +356,13 @@ const CurrentBadge = styled.div`
   text-align: center;
   font-size: 13px;
   font-weight: 600;
-  color: #10B981;
-  background: rgba(16,185,129,0.1);
-  border: 1px solid rgba(16,185,129,0.2);
+  color: ${({ theme }) => theme.status.success};
+  background: ${({ theme }) => theme.status.successBg};
+  border: 1px solid ${({ theme }) => theme.status.success}30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 `;
 
 /* Modal */
@@ -287,17 +384,23 @@ const ModalCard = styled(Card)`
   animation: ${fadeIn} 0.3s ease;
 `;
 
-const ModalTitle = styled.div`
+const ModalHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 8px;
   h3 {
     font-size: 18px;
     font-weight: 700;
     color: ${({ theme }) => theme.text.primary};
     margin: 0;
   }
+`;
+
+const ModalSub = styled.p`
+  font-size: 14px;
+  color: ${({ theme }) => theme.text.secondary};
+  margin: 0 0 24px;
 `;
 
 const CloseBtn = styled.button`
@@ -350,6 +453,11 @@ const ModalBtn = styled.button<{ $primary?: boolean }>`
   border: ${({ $primary, theme }) => $primary ? 'none' : `1.5px solid ${theme.border.default}`};
   background: ${({ $primary, theme }) => $primary ? theme.accent.gradient : 'transparent'};
   color: ${({ $primary, theme }) => $primary ? 'white' : theme.text.primary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const ErrorText = styled.p`
@@ -392,8 +500,10 @@ const planColorSets = [
 
 /* ─── Component ───────────────────────────────────────────────────────────── */
 export const MyPlanPage: React.FC = () => {
+  const navigate = useNavigate();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [credits, setCredits] = useState({ available: 0, used: 0 });
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [loadingSub, setLoadingSub] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -415,9 +525,16 @@ export const MyPlanPage: React.FC = () => {
         setSubscription(res.data.data || null);
       } catch {} finally { setLoadingSub(false); }
     };
+    const fetchCredits = async () => {
+      try {
+        const res = await paymentsService.getCreditsBalance();
+        setCredits(res.data.data || { available: 0, used: 0 });
+      } catch {}
+    };
     fetchPlans();
     fetchSub();
-  }, []);
+    fetchCredits();
+  }, [];
 
   const handleSubscribe = (planId: string) => {
     setSelectedPlan(planId);
@@ -430,42 +547,64 @@ export const MyPlanPage: React.FC = () => {
     setSubmitting(true);
     setError('');
     try {
-      await paymentsService.subscribe(selectedPlan, paymentMethod);
-      setShowModal(false);
-      // Refresh subscription
-      const res = await subscriptionsService.getCurrent();
-      setSubscription(res.data.data || null);
-    } catch {
-      setError('Erro ao processar pagamento. Tente novamente.');
+      const res = await paymentsService.createSubscriptionCheckout({
+        planId: selectedPlan,
+        paymentMethod: paymentMethod === 'CREDIT_CARD' ? 'card' : 'pix',
+        successUrl: `${window.location.origin}/dashboard?payment=success`,
+        cancelUrl: `${window.location.origin}/my-plan`,
+      });
+      const url = res?.data?.data?.checkoutUrl;
+      if (url) {
+        window.location.href = url;
+      } else {
+        setError('Link de pagamento nao disponivel. Configure o Stripe no backend.');
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Erro ao processar pagamento. Tente novamente.');
     } finally { setSubmitting(false); }
   };
 
   const handleCancel = async () => {
     if (!subscription) return;
+    if (!window.confirm('Deseja cancelar sua assinatura? Voce tera acesso ate o fim do periodo atual.')) return;
     try {
-      await paymentsService.cancel(subscription.id);
-      setSubscription(null);
-    } catch {}
+      await paymentsService.cancelSubscription(subscription.id, false);
+      alert('Assinatura cancelada com sucesso.');
+      const res = await subscriptionsService.getCurrent();
+      setSubscription(res.data.data || null);
+    } catch {
+      alert('Erro ao cancelar assinatura. Tente novamente.');
+    }
+  };
+
+  const handleManagePortal = async () => {
+    try {
+      const res = await paymentsService.createPortalSession(`${window.location.origin}/my-plan`);
+      const url = res?.data?.data?.portalUrl;
+      if (url) window.open(url, '_blank');
+    } catch {
+      alert('Portal de gerenciamento nao disponivel no momento.');
+    }
   };
 
   const creditsUsed = subscription?.cleanNameCreditsUsed || 0;
   const creditsTotal = subscription?.cleanNameCreditsTotal || 0;
   const creditsPct = creditsTotal > 0 ? (creditsUsed / creditsTotal) * 100 : 0;
+  const selectedPlanObj = plans.find(p => p.id === selectedPlan);
 
   return (
     <Page>
-      {/* Current Subscription */}
       <div>
         <SectionHeader>
           <h2>Meu Plano</h2>
-          <p>Gerencie sua assinatura atual</p>
+          <p>Gerencie sua assinatura e creditos Limpa Nome</p>
         </SectionHeader>
       </div>
 
       {loadingSub ? (
         <Card>
-          <div style={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
-            Carregando...
+          <div style={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#999' }}>
+            <SpinLoader size={20} /> Carregando...
           </div>
         </Card>
       ) : subscription && subscription.status !== 'CANCELED' ? (
@@ -478,7 +617,10 @@ export const MyPlanPage: React.FC = () => {
             </PlanInfo>
             <PlanRight>
               <p className="label">Proxima renovacao</p>
-              <p className="value">{new Date(subscription.currentPeriodEnd).toLocaleDateString('pt-BR')}</p>
+              <p className="value">
+                <Calendar size={13} />
+                {new Date(subscription.currentPeriodEnd).toLocaleDateString('pt-BR')}
+              </p>
             </PlanRight>
           </PlanRow>
 
@@ -492,7 +634,13 @@ export const MyPlanPage: React.FC = () => {
             </ProgressTrack>
           </ProgressBar>
 
-          <CancelBtn onClick={handleCancel}>Cancelar Assinatura</CancelBtn>
+          <PlanActionsRow>
+            <ManageBtn onClick={handleManagePortal}>
+              <ExternalLink size={14} />
+              Gerenciar pagamento
+            </ManageBtn>
+            <CancelBtn onClick={handleCancel}>Cancelar assinatura</CancelBtn>
+          </PlanActionsRow>
         </CurrentPlanCard>
       ) : (
         <EmptyBox>
@@ -501,6 +649,20 @@ export const MyPlanPage: React.FC = () => {
           <p style={{ fontSize: 13, opacity: 0.6, marginTop: 4 }}>Escolha um plano abaixo para comecar</p>
         </EmptyBox>
       )}
+
+      {/* Creditos */}
+      <CreditsCard>
+        <CreditsInfo>
+          <CreditsLabel>Creditos Limpa Nome disponiveis</CreditsLabel>
+          <CreditsValue>{credits.available}</CreditsValue>
+          <CreditsSub>{credits.used} creditos utilizados no total</CreditsSub>
+        </CreditsInfo>
+        <BuyMoreBtn onClick={() => navigate('/buy-credits')}>
+          <Zap size={16} />
+          Comprar mais creditos
+          <ArrowRight size={16} />
+        </BuyMoreBtn>
+      </CreditsCard>
 
       {/* Plans Grid */}
       <div>
@@ -514,12 +676,17 @@ export const MyPlanPage: React.FC = () => {
         <PlansGrid>
           {[1,2,3].map(i => (
             <Card key={i}>
-              <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
-                Carregando...
+              <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#999' }}>
+                <SpinLoader size={20} /> Carregando...
               </div>
             </Card>
           ))}
         </PlansGrid>
+      ) : plans.length === 0 ? (
+        <EmptyBox>
+          <p style={{ fontWeight: 600, fontSize: 15 }}>Planos em breve</p>
+          <p style={{ fontSize: 13, opacity: 0.6, marginTop: 4 }}>Os planos serao configurados em breve pelo administrador.</p>
+        </EmptyBox>
       ) : (
         <PlansGrid>
           {plans.map((plan, index) => {
@@ -560,9 +727,13 @@ export const MyPlanPage: React.FC = () => {
                 </FeatureList>
 
                 {isCurrent ? (
-                  <CurrentBadge>Plano Atual</CurrentBadge>
+                  <CurrentBadge>
+                    <CheckCircle size={14} />
+                    Plano Atual
+                  </CurrentBadge>
                 ) : (
                   <SubscribeBtn $primary={plan.isHighlighted} onClick={() => handleSubscribe(plan.id)}>
+                    <CreditCard size={15} />
                     {subscription ? 'Trocar para este plano' : 'Assinar agora'}
                   </SubscribeBtn>
                 )}
@@ -572,14 +743,24 @@ export const MyPlanPage: React.FC = () => {
         </PlansGrid>
       )}
 
+      <SecurityNote>
+        <Shield size={13} />
+        Pagamentos processados com seguranca via Stripe - SSL - PCI-DSS - Cancele a qualquer momento
+      </SecurityNote>
+
       {/* Payment Modal */}
       {showModal && (
         <Overlay>
           <ModalCard>
-            <ModalTitle>
+            <ModalHeader>
               <h3>Forma de Pagamento</h3>
               <CloseBtn onClick={() => setShowModal(false)}><X size={20} /></CloseBtn>
-            </ModalTitle>
+            </ModalHeader>
+            {selectedPlanObj && (
+              <ModalSub>
+                {selectedPlanObj.name} - R$ {Number(selectedPlanObj.price).toFixed(2).replace('.', ',')}/mes
+              </ModalSub>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
               <PaymentOption $selected={paymentMethod === 'CREDIT_CARD'} onClick={() => setPaymentMethod('CREDIT_CARD')}>
@@ -604,7 +785,11 @@ export const MyPlanPage: React.FC = () => {
             <ModalActions>
               <ModalBtn onClick={() => setShowModal(false)}>Cancelar</ModalBtn>
               <ModalBtn $primary onClick={handleConfirm} disabled={submitting}>
-                {submitting ? 'Processando...' : 'Confirmar'}
+                {submitting ? (
+                  <><SpinLoader size={16} /> Processando...</>
+                ) : (
+                  <><ArrowRight size={16} /> Ir para pagamento</>
+                )}
               </ModalBtn>
             </ModalActions>
 

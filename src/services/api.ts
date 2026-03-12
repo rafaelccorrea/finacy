@@ -81,14 +81,48 @@ export const subscriptionsService = {
 
 // ─── Payments Service ─────────────────────────────────────────────────────────
 export const paymentsService = {
+  // Assinatura mensal
+  createSubscriptionCheckout: (data: {
+    planId: string;
+    paymentMethod: 'card' | 'pix';
+    successUrl: string;
+    cancelUrl: string;
+  }) => api.post('/payments/checkout/subscription', data),
+
+  // Compra de créditos avulsos
+  createCreditCheckout: (data: {
+    packageId: string;
+    paymentMethod: 'card' | 'pix';
+    successUrl: string;
+    cancelUrl: string;
+  }) => api.post('/payments/checkout/credits', data),
+
+  // Pacotes de créditos disponíveis
+  listCreditPackages: () =>
+    api.get('/payments/credit-packages'),
+
+  // Saldo de créditos
+  getCreditsBalance: () =>
+    api.get('/payments/credits/balance'),
+
+  // Histórico de pagamentos
+  history: (page = 1, limit = 10) =>
+    api.get(`/payments/history?page=${page}&limit=${limit}`),
+
+  // Cancelar assinatura
+  cancelSubscription: (id: string, immediately = false) =>
+    api.post(`/payments/subscriptions/${id}/cancel`, { immediately }),
+
+  // Portal do cliente Stripe
+  createPortalSession: (returnUrl: string) =>
+    api.post('/payments/portal', { returnUrl }),
+
+  // Legado (mantido para compatibilidade)
   subscribe: (planId: string, paymentMethod: string) =>
     api.post(`/payments/subscribe/${planId}`, { paymentMethod }),
 
   createPix: (planId: string) =>
     api.post(`/payments/pix/${planId}`),
-
-  history: () =>
-    api.get('/payments/history'),
 
   cancel: (subscriptionId: string) =>
     api.post(`/payments/cancel/${subscriptionId}`),
