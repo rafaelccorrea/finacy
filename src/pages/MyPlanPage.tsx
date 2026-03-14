@@ -508,7 +508,7 @@ export const MyPlanPage: React.FC = () => {
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [loadingSub, setLoadingSub] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const paymentMethod: PaymentMethod = 'CREDIT_CARD';
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CREDIT_CARD');
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -550,7 +550,7 @@ export const MyPlanPage: React.FC = () => {
     try {
       const res = await paymentsService.createSubscriptionCheckout({
         planId: selectedPlan,
-        paymentMethod: 'card', // PIX não suportado para assinaturas recorrentes
+        paymentMethod: paymentMethod === 'CREDIT_CARD' ? 'card' : 'pix',
         successUrl: `${window.location.origin}/dashboard?payment=success`,
         cancelUrl: `${window.location.origin}/my-plan`,
       });
