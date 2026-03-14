@@ -473,7 +473,7 @@ interface Plan {
   name: string;
   price: number;
   description?: string;
-  features?: string[];
+  features?: string[] | Record<string, unknown>;
   cleanNameCredits: number;
   trialDays?: number;
   isHighlighted?: boolean;
@@ -714,8 +714,8 @@ export const MyPlanPage: React.FC = () => {
                 {plan.description && <PlanDesc>{plan.description}</PlanDesc>}
 
                 <FeatureList>
-                  {plan.features?.map(f => (
-                    <FeatureItem key={f}>
+                  {(Array.isArray(plan.features) ? plan.features : []).map(f => (
+                    <FeatureItem key={String(f)}>
                       <CheckCircle size={16} color="#10B981" />
                       {f}
                     </FeatureItem>
