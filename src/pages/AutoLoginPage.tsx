@@ -15,7 +15,7 @@ export const AutoLoginPage: React.FC = () => {
         const response = await authService.login('admin@finacy.com', 'Admin@2025');
         const data = response.data.data;
         const { user, accessToken, refreshToken, hasActiveSubscription, subscription } = data;
-        setAuth(accessToken, refreshToken, user, hasActiveSubscription ?? false, subscription ?? null);
+        setAuth(user, accessToken, refreshToken, hasActiveSubscription ?? false, subscription ?? null);
         setStatus('Login realizado! Redirecionando...');
         setTimeout(() => navigate('/dashboard'), 500);
       } catch (err: any) {

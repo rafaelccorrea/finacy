@@ -11,13 +11,14 @@ interface AuthState {
   hasActiveSubscription: boolean;
   subscription: Subscription | null;
   setAuth: (
+    user: User,
     accessToken: string,
     refreshToken: string,
-    user: User,
-    hasActiveSubscription: boolean,
-    subscription: Subscription | null,
+    hasActiveSubscription?: boolean,
+    subscription?: Subscription | null,
   ) => void;
   setUser: (user: User) => void;
+  setSubscription: (hasActive: boolean, subscription: Subscription | null) => void;
   logout: () => void;
 }
 
@@ -30,16 +31,25 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       hasActiveSubscription: false,
       subscription: null,
-      setAuth: (accessToken, refreshToken, user, hasActiveSubscription, subscription) => {
-        if (accessToken) localStorage.setItem('accessToken', accessToken);
-        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+      setAuth: (user, accessToken, refreshToken, hasActiveSubscription = false, subscription = null) => {
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
         set({ user, accessToken, refreshToken, isAuthenticated: true, hasActiveSubscription, subscription });
       },
       setUser: (user) => set({ user }),
+      setSubscription: (hasActive, subscription) =>
+        set({ hasActiveSubscription: hasActive, subscription }),
       logout: () => {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, hasActiveSubscription: false, subscription: null });
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          hasActiveSubscription: false,
+          subscription: null,
+        });
       },
     }),
     {
