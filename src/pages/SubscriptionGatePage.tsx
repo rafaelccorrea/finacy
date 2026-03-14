@@ -280,7 +280,7 @@ const SubscriptionGatePage: React.FC = () => {
     try {
       const response = await paymentsService.createSubscriptionCheckout({
         planId: selectedPlan,
-        paymentMethod,
+        paymentMethod: paymentMethod === 'credit_card' ? 'card' : 'pix',
         successUrl: window.location.origin + '/dashboard?subscribed=true',
         cancelUrl: window.location.origin + '/choose-plan',
       });
