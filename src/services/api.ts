@@ -1,6 +1,6 @@
 import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 
-const BASE_URL = 'https://finacy-back-git-main-rafaelccorreas-projects.vercel.app/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://finacy-back.vercel.app/api/v1';
 
 export const api = axios.create({
   baseURL: BASE_URL,
