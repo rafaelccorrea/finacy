@@ -290,9 +290,11 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       const res = await authService.login(email.trim(), password);
-      const { user, accessToken, refreshToken, hasActiveSubscription, subscription } = res.data.data;
+      const data = res.data.data;
+      const { user, accessToken, refreshToken, hasActiveSubscription, subscription } = data;
       setAuth(user, accessToken, refreshToken, hasActiveSubscription ?? false, subscription ?? null);
-      if (!hasActiveSubscription) {
+      const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+      if (!isAdmin && !hasActiveSubscription) {
         navigate('/choose-plan');
       } else {
         navigate('/dashboard');

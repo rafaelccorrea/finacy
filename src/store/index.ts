@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '../types';
+import type { User, Subscription } from '../types';
 
 // ─── Subscription Info ────────────────────────────────────────────────────────
 interface SubscriptionInfo {
@@ -21,16 +21,16 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   hasActiveSubscription: boolean;
-  subscription: SubscriptionInfo | null;
+  subscription: Subscription | null;
   setAuth: (
     user: User,
     accessToken: string,
     refreshToken: string,
     hasActiveSubscription?: boolean,
-    subscription?: SubscriptionInfo | null,
+    subscription?: Subscription | null,
   ) => void;
   setUser: (user: User) => void;
-  setSubscription: (hasActive: boolean, subscription: SubscriptionInfo | null) => void;
+  setSubscription: (hasActive: boolean, subscription: Subscription | null) => void;
   logout: () => void;
 }
 

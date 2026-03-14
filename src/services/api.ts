@@ -161,3 +161,57 @@ export const cleanNameService = {
   getById: (id: string) =>
     api.get(`/clean-name/requests/${id}`),
 };
+
+// ─── Admin Service ────────────────────────────────────────────────────────────
+export const adminService = {
+  // Dashboard
+  getDashboardStats: () =>
+    api.get('/admin/dashboard/stats'),
+
+  // Users
+  getUsers: (page = 1, limit = 20, search?: string, role?: string, status?: string) => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    if (search) params.set('search', search);
+    if (role) params.set('role', role);
+    if (status) params.set('status', status);
+    return api.get(`/admin/users?${params.toString()}`);
+  },
+
+  getUserDetails: (id: string) =>
+    api.get(`/admin/users/${id}`),
+
+  updateUserRole: (id: string, role: string) =>
+    api.patch(`/admin/users/${id}/role`, { role }),
+
+  updateUserStatus: (id: string, status: string) =>
+    api.patch(`/admin/users/${id}/status`, { status }),
+
+  addCredits: (id: string, credits: number) =>
+    api.post(`/admin/users/${id}/credits`, { credits }),
+
+  // Subscriptions
+  getSubscriptions: (page = 1, limit = 20, status?: string, planId?: string) => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    if (status) params.set('status', status);
+    if (planId) params.set('planId', planId);
+    return api.get(`/admin/subscriptions?${params.toString()}`);
+  },
+
+  // Payments
+  getPayments: (page = 1, limit = 20, status?: string, type?: string) => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    if (status) params.set('status', status);
+    if (type) params.set('type', type);
+    return api.get(`/admin/payments?${params.toString()}`);
+  },
+
+  // Plans
+  getPlans: () => api.get('/admin/plans'),
+  updatePlan: (id: string, data: object) => api.patch(`/admin/plans/${id}`, data),
+};

@@ -1,5 +1,5 @@
 // ─── User Types ──────────────────────────────────────────────────────────────
-export type UserRole = 'USER' | 'ADMIN' | 'SUPER_ADMIN';
+export type UserRole = 'USER' | 'ADMIN' | 'SUPER_ADMIN' | 'user' | 'admin' | 'super_admin';
 
 export interface User {
   id: string;
@@ -8,7 +8,7 @@ export interface User {
   cpf: string;
   phone?: string;
   role: UserRole;
-  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'active' | 'inactive' | 'suspended' | 'pending_verification';
   emailVerified: boolean;
   stripeCustomerId?: string;
   lastLoginAt?: string;
