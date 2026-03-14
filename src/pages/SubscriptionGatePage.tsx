@@ -254,7 +254,8 @@ const SubscriptionGatePage: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>('credit_card');
+  // PIX não é suportado pelo Stripe para assinaturas recorrentes (mode: 'subscription')
+  const paymentMethod = 'card' as const;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -366,10 +367,16 @@ const SubscriptionGatePage: React.FC = () => {
                 ))}
               </FeatureList>
               {selectedPlan === plan.id && (
-                <PaymentMethodSelect>
-                  <MethodButton $active={paymentMethod === 'credit_card'} onClick={(e) => { e.stopPropagation(); setPaymentMethod('credit_card'); }}>Cartao</MethodButton>
-                  <MethodButton $active={paymentMethod === 'pix'} onClick={(e) => { e.stopPropagation(); setPaymentMethod('pix'); }}>PIX</MethodButton>
-                </PaymentMethodSelect>
+                <>
+                  <PaymentMethodSelect>
+                    <MethodButton $active={true} style={{ cursor: 'default', flex: 1 }}>
+                      💳 Cartão de Crédito
+                    </MethodButton>
+                  </PaymentMethodSelect>
+                  <div style={{ fontSize: '11px', color: '#888', textAlign: 'center', marginBottom: '12px' }}>
+                    PIX disponível apenas para compra de créditos avulsos
+                  </div>
+                </>
               )}
               <SelectButton
                 $selected={selectedPlan === plan.id}

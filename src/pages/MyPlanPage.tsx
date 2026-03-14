@@ -489,7 +489,8 @@ interface Subscription {
   cleanNameCreditsTotal?: number;
 }
 
-type PaymentMethod = 'CREDIT_CARD' | 'PIX';
+// PIX não é suportado pelo Stripe para assinaturas recorrentes
+type PaymentMethod = 'CREDIT_CARD';
 
 const planIcons = [Zap, Star, Crown];
 const planColorSets = [
@@ -507,7 +508,7 @@ export const MyPlanPage: React.FC = () => {
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [loadingSub, setLoadingSub] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CREDIT_CARD');
+  const paymentMethod: PaymentMethod = 'CREDIT_CARD';
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -549,7 +550,7 @@ export const MyPlanPage: React.FC = () => {
     try {
       const res = await paymentsService.createSubscriptionCheckout({
         planId: selectedPlan,
-        paymentMethod: paymentMethod === 'CREDIT_CARD' ? 'card' : 'pix',
+        paymentMethod: 'card', // PIX não suportado para assinaturas recorrentes
         successUrl: `${window.location.origin}/dashboard?payment=success`,
         cancelUrl: `${window.location.origin}/my-plan`,
       });
