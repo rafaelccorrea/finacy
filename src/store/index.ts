@@ -2,6 +2,18 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Subscription } from '../types';
 
+// ─── Subscription Info ────────────────────────────────────────────────────────
+interface SubscriptionInfo {
+  id: string;
+  status: string;
+  planId: string;
+  planName: string | null;
+  planSlug: string | null;
+  currentPeriodEnd: string | null;
+  cleanNameCreditsUsed: number;
+  cleanNameCreditsTotal: number;
+}
+
 // ─── Auth Store ───────────────────────────────────────────────────────────────
 interface AuthState {
   user: User | null;
