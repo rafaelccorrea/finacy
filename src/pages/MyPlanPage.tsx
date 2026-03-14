@@ -490,7 +490,7 @@ interface Subscription {
 }
 
 // PIX não é suportado pelo Stripe para assinaturas recorrentes
-type PaymentMethod = 'CREDIT_CARD';
+type PaymentMethod = 'CREDIT_CARD' | 'PIX';
 
 const planIcons = [Zap, Star, Crown];
 const planColorSets = [
