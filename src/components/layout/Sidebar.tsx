@@ -113,7 +113,7 @@ const Divider = styled.div`
   margin: 8px 0 20px 0;
 `;
 
-const Spacer = styled.div\`flex: 1;\`;
+const Spacer = styled.div`flex: 1;`;
 
 const LogoutBtn = styled.button`
   display: flex;
