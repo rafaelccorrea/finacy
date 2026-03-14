@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { GlobalStyles } from './styles/GlobalStyles';
 import { darkTheme, lightTheme } from './styles/theme';
@@ -11,13 +11,47 @@ import { CleanNamePage } from './pages/CleanNamePage';
 import CleanNameDetailPage from './pages/CleanNameDetailPage';
 import { AutoLoginPage } from './pages/AutoLoginPage';
 import BuyCreditsPage from './pages/BuyCreditsPage';
+import SubscriptionGatePage from './pages/SubscriptionGatePage';
 import { useAuthStore, useThemeStore } from './store';
+import { authService } from './services/api';
 
+// ─── SubscriptionChecker ──────────────────────────────────────────────────────
+// Verifica o status da assinatura ao montar a aplicacao (para sessoes persistidas)
+const SubscriptionChecker: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, hasActiveSubscription, setSubscription } = useAuthStore();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      authService.me()
+        .then((res) => {
+          const data = res.data?.data || res.data;
+          setSubscription(data?.hasActiveSubscription ?? false, data?.subscription ?? null);
+        })
+        .catch(() => {
+          // Silently fail - o estado atual do store sera mantido
+        });
+    }
+  }, [isAuthenticated]);
+
+  return <>{children}</>;
+};
+
+// ─── ProtectedRoute ───────────────────────────────────────────────────────────
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
+// ─── SubscriptionGuard ────────────────────────────────────────────────────────
+// Redireciona para /choose-plan se o usuario nao tiver assinatura ativa
+const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, hasActiveSubscription } = useAuthStore();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!hasActiveSubscription) return <Navigate to="/choose-plan" replace />;
+  return <>{children}</>;
+};
+
+// ─── PublicRoute ──────────────────────────────────────────────────────────────
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
   return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" replace />;
@@ -30,21 +64,34 @@ function App() {
   return (
     <ThemeProvider theme={currentTheme}>
       <GlobalStyles />
-      <Routes>
-        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+      <SubscriptionChecker>
+        <Routes>
+          <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
 
-        <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="my-plan" element={<MyPlanPage />} />
-          <Route path="clean-name" element={<CleanNamePage />} />
-          <Route path="clean-name/:id" element={<CleanNameDetailPage />} />
-          <Route path="buy-credits" element={<BuyCreditsPage />} />
-        </Route>
+          {/* Pagina de escolha de plano - acessivel para usuarios autenticados sem assinatura */}
+          <Route
+            path="/choose-plan"
+            element={
+              <ProtectedRoute>
+                <SubscriptionGatePage />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route path="/auto-login" element={<AutoLoginPage />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+          {/* Rotas protegidas que exigem assinatura ativa */}
+          <Route path="/" element={<SubscriptionGuard><AppLayout /></SubscriptionGuard>}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="my-plan" element={<MyPlanPage />} />
+            <Route path="clean-name" element={<CleanNamePage />} />
+            <Route path="clean-name/:id" element={<CleanNameDetailPage />} />
+            <Route path="buy-credits" element={<BuyCreditsPage />} />
+          </Route>
+
+          <Route path="/auto-login" element={<AutoLoginPage />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </SubscriptionChecker>
     </ThemeProvider>
   );
 }
