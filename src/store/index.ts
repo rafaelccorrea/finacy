@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '../types';
+import type { User, Subscription } from '../types';
 
 // ─── Auth Store ───────────────────────────────────────────────────────────────
 interface AuthState {
@@ -8,7 +8,15 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+  hasActiveSubscription: boolean;
+  subscription: Subscription | null;
+  setAuth: (
+    accessToken: string,
+    refreshToken: string,
+    user: User,
+    hasActiveSubscription: boolean,
+    subscription: Subscription | null,
+  ) => void;
   setUser: (user: User) => void;
   logout: () => void;
 }
@@ -20,19 +28,18 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
-
-      setAuth: (user, accessToken, refreshToken) => {
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        set({ user, accessToken, refreshToken, isAuthenticated: true });
+      hasActiveSubscription: false,
+      subscription: null,
+      setAuth: (accessToken, refreshToken, user, hasActiveSubscription, subscription) => {
+        if (accessToken) localStorage.setItem('accessToken', accessToken);
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+        set({ user, accessToken, refreshToken, isAuthenticated: true, hasActiveSubscription, subscription });
       },
-
       setUser: (user) => set({ user }),
-
       logout: () => {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, hasActiveSubscription: false, subscription: null });
       },
     }),
     {
@@ -42,6 +49,8 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
+        hasActiveSubscription: state.hasActiveSubscription,
+        subscription: state.subscription,
       }),
     },
   ),
@@ -58,12 +67,10 @@ export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
       theme: 'dark',
-
       toggleTheme: () => {
         const newTheme = get().theme === 'light' ? 'dark' : 'light';
         set({ theme: newTheme });
       },
-
       setTheme: (theme) => {
         set({ theme });
       },

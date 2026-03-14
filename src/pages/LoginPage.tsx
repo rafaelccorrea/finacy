@@ -290,9 +290,15 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       const res = await authService.login(email.trim(), password);
-      const { user, accessToken, refreshToken } = res.data.data;
-      setAuth(user, accessToken, refreshToken);
-      navigate('/dashboard');
+      const data = res.data.data;
+      const { user, accessToken, refreshToken, hasActiveSubscription, subscription } = data;
+      setAuth(accessToken, refreshToken, user, hasActiveSubscription ?? false, subscription ?? null);
+      const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+      if (!isAdmin && !hasActiveSubscription) {
+        navigate('/choose-plan');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Credenciais invalidas. Tente novamente.');
     } finally {
