@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { GlobalStyles } from './styles/GlobalStyles';
 import { darkTheme, lightTheme } from './styles/theme';
@@ -17,6 +17,105 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminSubscriptionsPage from './pages/admin/AdminSubscriptionsPage';
 import { useAuthStore, useThemeStore } from './store';
 import { authService } from './services/api';
+
+// ─── PostCheckoutHandler ──────────────────────────────────────────────────────
+// Detecta o retorno do Stripe (?subscribed=true ou ?payment=success) e faz
+// polling no /auth/me ate a assinatura ser confirmada no backend (webhook).
+// Enquanto aguarda, exibe uma tela de carregamento para evitar o redirect errado.
+const PostCheckoutHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { isAuthenticated, hasActiveSubscription, setSubscription } = useAuthStore();
+  const [checking, setChecking] = useState(false);
+
+  const isPostCheckout =
+    searchParams.get('subscribed') === 'true' ||
+    searchParams.get('payment') === 'success' ||
+    searchParams.get('type') === 'subscription';
+
+  useEffect(() => {
+    if (!isAuthenticated || !isPostCheckout || hasActiveSubscription) return;
+
+    // Retornou do Stripe mas assinatura ainda nao esta ativa no store
+    // Faz polling no /auth/me por ate 30s (webhook pode demorar alguns segundos)
+    setChecking(true);
+    let attempts = 0;
+    const maxAttempts = 10; // 10 tentativas x 3s = 30s maximo
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await authService.me();
+        const data = res.data?.data || res.data;
+        if (data?.hasActiveSubscription) {
+          setSubscription(true, data?.subscription ?? null);
+          clearInterval(interval);
+          setChecking(false);
+          // Limpar os parametros da URL e ir para o dashboard
+          navigate('/dashboard', { replace: true });
+        } else if (attempts >= maxAttempts) {
+          // Timeout: mesmo sem confirmar, deixa o usuario tentar acessar
+          clearInterval(interval);
+          setChecking(false);
+          setSubscription(data?.hasActiveSubscription ?? false, data?.subscription ?? null);
+        }
+      } catch {
+        if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          setChecking(false);
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, isPostCheckout, hasActiveSubscription]);
+
+  if (checking) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#0F1117',
+        gap: '24px',
+      }}>
+        <div style={{
+          width: '56px',
+          height: '56px',
+          background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+          borderRadius: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '24px',
+          fontWeight: 800,
+          color: 'white',
+        }}>F</div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '3px solid rgba(99,102,241,0.3)',
+            borderTop: '3px solid #6366F1',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+            margin: '0 auto 16px',
+          }} />
+          <p style={{ color: '#E2E8F0', fontSize: '18px', fontWeight: 600, margin: '0 0 8px' }}>
+            Confirmando sua assinatura...
+          </p>
+          <p style={{ color: '#94A3B8', fontSize: '14px', margin: 0 }}>
+            Aguarde enquanto processamos seu pagamento
+          </p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
 
 // ─── SubscriptionChecker ──────────────────────────────────────────────────────
 // Verifica o status da assinatura ao montar a aplicacao (para sessoes persistidas)
@@ -91,7 +190,16 @@ function App() {
           />
 
           {/* Rotas protegidas que exigem assinatura ativa (admin isento) */}
-          <Route path="/" element={<SubscriptionGuard><AppLayout /></SubscriptionGuard>}>
+          <Route
+            path="/"
+            element={
+              <PostCheckoutHandler>
+                <SubscriptionGuard>
+                  <AppLayout />
+                </SubscriptionGuard>
+              </PostCheckoutHandler>
+            }
+          >
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="my-plan" element={<MyPlanPage />} />
