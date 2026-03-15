@@ -289,7 +289,7 @@ export const DashboardPage: React.FC = () => {
             <StatLabel>Plano Atual</StatLabel>
           </StatHeader>
           <div>
-            <StatValue>{data?.currentPlan || 'Sem plano'}</StatValue>
+            <StatValue>{typeof data?.currentPlan === 'string' ? data.currentPlan : data?.currentPlan?.name || 'Sem plano'}</StatValue>
             <StatSub>
               {data?.hasActiveSubscription
                 ? <Badge variant="success" dot>Ativo</Badge>

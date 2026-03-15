@@ -350,7 +350,7 @@ const SubscriptionGatePage: React.FC = () => {
             <PlanCard key={plan.id} $popular={plan.isPopular} $selected={selectedPlan === plan.id} onClick={() => setSelectedPlan(plan.id)}>
               {plan.isPopular && <PopularBadge>Mais popular</PopularBadge>}
               <PlanName>{plan.name}</PlanName>
-              <PlanDescription>{plan.description}</PlanDescription>
+              <PlanDescription>{plan.description ?? ''}</PlanDescription>
               <PlanPrice>
                 <span className="currency">R$</span>
                 <span className="amount">{Number(plan.price).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</span>
