@@ -217,7 +217,7 @@ const SkeletonBox = styled.div<{ $w?: string; $h?: string }>`
 /* ─── Types ───────────────────────────────────────────────────────────────── */
 interface DashboardData {
   hasActiveSubscription: boolean;
-  currentPlan: string | null;
+  currentPlan: string | { name?: string } | null;
   subscriptionStatus: string | null;
   currentPeriodEnd: string | null;
   cleanNameCreditsUsed: number;
